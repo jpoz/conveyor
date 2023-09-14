@@ -1,0 +1,9 @@
+syntax = "proto3";
+package fixtures;
+
+option go_package = "github.com/jpoz/protojob/fixtures";
+
+message Basic {
+  string str = 1;
+  int32 int  = 2;
+}

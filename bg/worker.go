@@ -99,6 +99,9 @@ func (w *Worker) RegisterJob(fn any) error {
 
 func (w *Worker) ContextFor(job *protos.Job) context.Context {
 	ctx := context.Background()
+
+	ctx = JobContext(ctx, job)
+
 	return ctx
 }
 
@@ -152,18 +155,17 @@ func (w *Worker) Run(ctx context.Context) error {
 		}
 
 		if resp.Job == nil {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.NewTimer(2 * time.Second).C:
+			}
 			continue
 		}
 
 		err = w.CallJob(resp.Job)
 		if err != nil {
 			logrus.Error(err)
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.NewTimer(2 * time.Second).C:
 		}
 	}
 }

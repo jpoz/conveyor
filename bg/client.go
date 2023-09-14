@@ -14,7 +14,7 @@ type Client struct {
 	conn *grpc.ClientConn
 }
 
-type Job struct {
+type Result struct {
 	Uuid string
 }
 
@@ -36,7 +36,7 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-func (c *Client) Enqueue(ctx context.Context, msg proto.Message) (*Job, error) {
+func (c *Client) Enqueue(ctx context.Context, msg proto.Message) (*Result, error) {
 	payload, err := proto.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -54,5 +54,5 @@ func (c *Client) Enqueue(ctx context.Context, msg proto.Message) (*Job, error) {
 		return nil, err
 	}
 
-	return &Job{Uuid: resp.Job.Uuid}, nil
+	return &Result{Uuid: resp.Job.Uuid}, nil
 }

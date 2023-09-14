@@ -1,1 +1,2 @@
+addr: 0.0.0.0:8080
 redisURL: redis://localhost:6381

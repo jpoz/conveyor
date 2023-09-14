@@ -49,6 +49,11 @@ gen_protos: ## Generate protobuf models
 			--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 			${PROTO_FILES}
 
+## Tests
+.PHONY: integration
+integration: ## Run tests
+	./run_tests.sh
+
 
 ## Help:
 .PHONY: help

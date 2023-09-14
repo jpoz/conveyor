@@ -2,10 +2,9 @@ package hub
 
 import (
 	context "context"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,6 +20,7 @@ import (
 )
 
 type Config struct {
+	Addr     string `yaml:"addr"`
 	RedisURL string `yaml:"redisURL" json:"redisURL"`
 }
 
@@ -32,27 +32,28 @@ type Server struct {
 	protos.UnimplementedHubServer
 }
 
-func NewServer(opts ServerOpts) (*Server, error) {
-	log := logrus.New()
-	log.SetLevel(logrus.DebugLevel)
-	log.Infof("hub loading config at %v", opts.ConfigPath)
-
-	// Read YAML file
-	data, err := ioutil.ReadFile(opts.ConfigPath)
+func ReadConfig(path string) (Config, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("Error reading YAML file: %s\n", err)
 	}
 
 	var config Config
-
 	err = yaml.Unmarshal([]byte(data), &config)
 	if err != nil {
 		log.Fatalf("Error unmarshaling YAML: %s\n", err)
 	}
 
-	log.Printf("hub config: %+v", config)
+	return config, nil
+}
 
-	redisOpts, err := redis.ParseURL(config.RedisURL)
+func NewServer(cfg Config) (*Server, error) {
+	log := logrus.New()
+	log.SetLevel(logrus.DebugLevel)
+
+	log.Printf("hub config: %+v", cfg)
+
+	redisOpts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +65,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 
 	srv := &Server{
 		log:    log,
-		config: config,
+		config: cfg,
 		rdb:    rdb,
 	}
 
@@ -72,8 +73,7 @@ func NewServer(opts ServerOpts) (*Server, error) {
 }
 
 func (s *Server) SubmitNewJob(ctx context.Context, newJob *protos.NewJobRequest) (*protos.NewJobResponse, error) {
-	s.log.Println("SubmitNewJob")
-	s.log.Println(newJob)
+	s.log.WithFields(logrus.Fields{"job": newJob.FullName}).Info("Received job")
 
 	jid := uuid.New()
 	job := &protos.Job{
@@ -118,6 +118,8 @@ func (s *Server) Pop(ctx context.Context, req *protos.PopRequest) (*protos.WorkR
 		return nil, err
 	}
 
+	s.log.WithFields(logrus.Fields{"job": job.FullName, "uuid": job.Uuid}).Info("Sending out job")
+
 	return &protos.WorkRequest{Job: job}, nil
 }
 
@@ -125,8 +127,8 @@ func (s *Server) Close(context.Context, *protos.WorkResponse) (*protos.CloseResp
 	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
 }
 
-func (s *Server) Listen(port int) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+func (s *Server) Listen(ctx context.Context) error {
+	lis, err := net.Listen("tcp", s.config.Addr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -137,5 +139,25 @@ func (s *Server) Listen(port int) error {
 	grpcServer := grpc.NewServer(opts...)
 	protos.RegisterHubServer(grpcServer, s)
 
-	return grpcServer.Serve(lis)
+	// Create a channel to receive any error from grpcServer.Serve()
+	errCh := make(chan error, 1)
+
+	// Run grpcServer.Serve in a separate goroutine
+	go func() {
+		errCh <- grpcServer.Serve(lis)
+	}()
+
+	// Listen for ctx.Done() in another goroutine
+	go func() {
+		<-ctx.Done()
+		grpcServer.GracefulStop()
+	}()
+
+	// Wait for either grpcServer.Serve to finish or ctx.Done() to be closed
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return nil
+	}
 }

@@ -9,14 +9,17 @@ import (
 	"github.com/jpoz/protojob/examples/helloworld/hello"
 )
 
+func helloJob(ctx context.Context, msg *hello.HelloJob) error {
+	job := bg.Job(ctx)
+
+	fmt.Printf("%s %s %s\n", job.Uuid, msg.Greeting, msg.Name)
+	return nil
+}
+
 func main() {
 	w := bg.NewWorker("localhost:8080")
 
-	err := w.RegisterJob(func(ctx context.Context, msg *hello.HelloJob) error {
-		fmt.Printf("msg: %v\n", msg)
-		fmt.Printf("%s %s\n", msg.Greeting, msg.Name)
-		return nil
-	})
+	err := w.RegisterJob(helloJob)
 	if err != nil {
 		log.Fatal(err)
 	}
