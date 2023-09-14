@@ -1,0 +1,9 @@
+syntax = "proto3";
+package helloworld;
+
+option go_package = "github.com/jpoz/protojob/examples/helloworld/hello";
+
+message HelloJob {
+  string name = 1;
+  string greeting = 2;
+}

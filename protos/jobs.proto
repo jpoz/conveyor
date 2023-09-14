@@ -1,0 +1,53 @@
+syntax = "proto3";
+package hub;
+
+option go_package = "github.com/jpoz/protojob/protos";
+
+// Job data structure
+message Job {
+  string uuid = 1;
+  string full_name = 2;
+  bytes payload = 3;
+  string parent_uuid = 4;
+}
+
+message Error {
+  string message = 1;
+}
+
+// Request message for submitting a new job
+message NewJobRequest {
+  string full_name = 1;
+  bytes payload = 2;
+}
+
+// Response message for new job submission
+message NewJobResponse {
+  bool success = 1;
+  string message = 2;
+  Job job = 3;
+}
+
+message PopRequest {
+  repeated string full_names = 1;
+}
+
+
+message WorkRequest {
+  Job job = 1;
+}
+
+message WorkResponse {
+  Job job = 1;
+  repeated Job child_jobs = 2;
+  repeated Error errors = 3;
+}
+
+message CloseResponse {}
+
+
+service hub {
+  rpc SubmitNewJob(NewJobRequest) returns (NewJobResponse);
+  rpc Pop(PopRequest) returns (WorkRequest);
+  rpc Close(WorkResponse) returns (CloseResponse);
+}
