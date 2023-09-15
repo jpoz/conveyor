@@ -10,7 +10,7 @@ import (
 )
 
 type HubClient struct {
-	hub  wire.HubClient
+	Hub  wire.HubClient
 	conn *grpc.ClientConn
 }
 
@@ -28,12 +28,15 @@ func NewClient(hubAddr string) *HubClient {
 	}
 
 	return &HubClient{
-		hub:  wire.NewHubClient(conn),
+		Hub:  wire.NewHubClient(conn),
 		conn: conn,
 	}
 }
 
 func (c *HubClient) Close() error {
+	if c.conn == nil {
+		return nil
+	}
 	return c.conn.Close()
 }
 
@@ -93,10 +96,14 @@ func (c *HubClient) EnqueueHeir(ctx context.Context, msg proto.Message) (*Result
 }
 
 func (c *HubClient) add(ctx context.Context, request *wire.AddRequest) (*Result, error) {
-	resp, err := c.hub.Add(ctx, request)
+	resp, err := c.Hub.Add(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Result{Uuid: resp.Job.Uuid}, nil
+	if resp != nil {
+		return &Result{Uuid: resp.Job.Uuid}, nil
+	}
+
+	return nil, nil
 }

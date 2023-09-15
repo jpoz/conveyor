@@ -48,7 +48,7 @@ func NewWorker(hubAddr string) *Worker {
 	return &Worker{
 		ID: uuid.New().String(),
 		Client: &HubClient{
-			hub:  wire.NewHubClient(conn),
+			Hub:  wire.NewHubClient(conn),
 			conn: conn,
 		},
 		hub:                 wire.NewHubClient(conn),
@@ -200,7 +200,6 @@ func (w *Worker) Run(ctx context.Context) error {
 			select {
 			case <-ctx.Done():
 				return nil
-			// case <-time.NewTimer(2 * time.Second).C:
 			default:
 			}
 			continue

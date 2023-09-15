@@ -50,6 +50,10 @@ hub: docker ## Run hub
 	$(GOCMD) run cmd/hub/main.go -c dev_config.yml
 
 ## Gen
+.PHONY: gen
+gen: ## Generate protobuf models
+	go generate ./...
+
 .PHONY: gen_protos
 gen_protos: ## Generate protobuf models
 	@echo ${PROTO_FILES}
