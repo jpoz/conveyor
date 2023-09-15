@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"time"
 
-	"github.com/jpoz/protojob/protos"
+	"github.com/google/uuid"
+	"github.com/jpoz/protojob/wire"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -27,8 +27,10 @@ type registeredJob struct {
 }
 
 type Worker struct {
-	hub  protos.HubClient
-	conn *grpc.ClientConn
+	ID     string
+	Client *HubClient
+	hub    wire.HubClient
+	conn   *grpc.ClientConn
 
 	fnMap               map[string]registeredJob
 	registeredFullNames []string
@@ -44,11 +46,26 @@ func NewWorker(hubAddr string) *Worker {
 	}
 
 	return &Worker{
-		hub:                 protos.NewHubClient(conn),
+		ID: uuid.New().String(),
+		Client: &HubClient{
+			hub:  wire.NewHubClient(conn),
+			conn: conn,
+		},
+		hub:                 wire.NewHubClient(conn),
 		conn:                conn,
 		fnMap:               make(map[string]registeredJob),
 		registeredFullNames: make([]string, 0),
 	}
+}
+
+func (w *Worker) RegisterJobs(fn ...any) error {
+	for _, f := range fn {
+		err := w.RegisterJob(f)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (w *Worker) RegisterJob(fn any) error {
@@ -97,16 +114,41 @@ func (w *Worker) RegisterJob(fn any) error {
 	return nil
 }
 
-func (w *Worker) ContextFor(job *protos.Job) context.Context {
+func (w *Worker) ContextFor(job *wire.Job) context.Context {
 	ctx := context.Background()
 
 	ctx = JobContext(ctx, job)
+	ctx = ClientContext(ctx, w.Client)
 
 	return ctx
 }
 
-func (w *Worker) CallJob(job *protos.Job) error {
-	registered := w.fnMap[string(job.FullName)]
+func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
+	err := w.callJob(job)
+	if err != nil {
+		_, ierr := w.hub.Fail(ctx, &wire.FailRequest{
+			Uuid: job.Uuid,
+		})
+		if ierr != nil {
+			return fmt.Errorf("failed to fail job %s: %w", job.Uuid, ierr)
+		}
+		return fmt.Errorf("job %s failed: %w", job.Uuid, err)
+	}
+
+	_, err = w.hub.Close(ctx, &wire.CloseRequest{
+		Job: job,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to close job %s: %w", job.Uuid, err)
+	}
+	return nil
+}
+
+func (w *Worker) callJob(job *wire.Job) error {
+	registered, ok := w.fnMap[string(job.Type)]
+	if !ok {
+		return fmt.Errorf("[%s] %w, %s", w.ID, ErrJobNotRegistered, job.Type)
+	}
 	msgType := registered.T
 	fn := registered.fn
 
@@ -146,7 +188,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 
 	for {
-		resp, err := w.hub.Pop(ctx, &protos.PopRequest{
+		resp, err := w.hub.Pop(ctx, &wire.PopRequest{
 			FullNames: w.registeredFullNames,
 		})
 		if err != nil {
@@ -158,12 +200,13 @@ func (w *Worker) Run(ctx context.Context) error {
 			select {
 			case <-ctx.Done():
 				return nil
-			case <-time.NewTimer(2 * time.Second).C:
+			// case <-time.NewTimer(2 * time.Second).C:
+			default:
 			}
 			continue
 		}
 
-		err = w.CallJob(resp.Job)
+		err = w.CallJob(ctx, resp.Job)
 		if err != nil {
 			logrus.Error(err)
 		}

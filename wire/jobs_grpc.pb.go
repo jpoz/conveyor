@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v4.24.3
-// source: protos/jobs.proto
+// source: wire/jobs.proto
 
-package protos
+package wire
 
 import (
 	context "context"
@@ -19,18 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Hub_SubmitNewJob_FullMethodName = "/hub.hub/SubmitNewJob"
-	Hub_Pop_FullMethodName          = "/hub.hub/Pop"
-	Hub_Close_FullMethodName        = "/hub.hub/Close"
+	Hub_Add_FullMethodName   = "/wire.hub/Add"
+	Hub_Pop_FullMethodName   = "/wire.hub/Pop"
+	Hub_Close_FullMethodName = "/wire.hub/Close"
+	Hub_Fail_FullMethodName  = "/wire.hub/Fail"
 )
 
 // HubClient is the client API for Hub service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type HubClient interface {
-	SubmitNewJob(ctx context.Context, in *NewJobRequest, opts ...grpc.CallOption) (*NewJobResponse, error)
+	Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddResponse, error)
 	Pop(ctx context.Context, in *PopRequest, opts ...grpc.CallOption) (*WorkRequest, error)
-	Close(ctx context.Context, in *WorkResponse, opts ...grpc.CallOption) (*CloseResponse, error)
+	Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error)
+	Fail(ctx context.Context, in *FailRequest, opts ...grpc.CallOption) (*FailResponse, error)
 }
 
 type hubClient struct {
@@ -41,9 +43,9 @@ func NewHubClient(cc grpc.ClientConnInterface) HubClient {
 	return &hubClient{cc}
 }
 
-func (c *hubClient) SubmitNewJob(ctx context.Context, in *NewJobRequest, opts ...grpc.CallOption) (*NewJobResponse, error) {
-	out := new(NewJobResponse)
-	err := c.cc.Invoke(ctx, Hub_SubmitNewJob_FullMethodName, in, out, opts...)
+func (c *hubClient) Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddResponse, error) {
+	out := new(AddResponse)
+	err := c.cc.Invoke(ctx, Hub_Add_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -59,9 +61,18 @@ func (c *hubClient) Pop(ctx context.Context, in *PopRequest, opts ...grpc.CallOp
 	return out, nil
 }
 
-func (c *hubClient) Close(ctx context.Context, in *WorkResponse, opts ...grpc.CallOption) (*CloseResponse, error) {
+func (c *hubClient) Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error) {
 	out := new(CloseResponse)
 	err := c.cc.Invoke(ctx, Hub_Close_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hubClient) Fail(ctx context.Context, in *FailRequest, opts ...grpc.CallOption) (*FailResponse, error) {
+	out := new(FailResponse)
+	err := c.cc.Invoke(ctx, Hub_Fail_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -72,9 +83,10 @@ func (c *hubClient) Close(ctx context.Context, in *WorkResponse, opts ...grpc.Ca
 // All implementations must embed UnimplementedHubServer
 // for forward compatibility
 type HubServer interface {
-	SubmitNewJob(context.Context, *NewJobRequest) (*NewJobResponse, error)
+	Add(context.Context, *AddRequest) (*AddResponse, error)
 	Pop(context.Context, *PopRequest) (*WorkRequest, error)
-	Close(context.Context, *WorkResponse) (*CloseResponse, error)
+	Close(context.Context, *CloseRequest) (*CloseResponse, error)
+	Fail(context.Context, *FailRequest) (*FailResponse, error)
 	mustEmbedUnimplementedHubServer()
 }
 
@@ -82,14 +94,17 @@ type HubServer interface {
 type UnimplementedHubServer struct {
 }
 
-func (UnimplementedHubServer) SubmitNewJob(context.Context, *NewJobRequest) (*NewJobResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitNewJob not implemented")
+func (UnimplementedHubServer) Add(context.Context, *AddRequest) (*AddResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Add not implemented")
 }
 func (UnimplementedHubServer) Pop(context.Context, *PopRequest) (*WorkRequest, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Pop not implemented")
 }
-func (UnimplementedHubServer) Close(context.Context, *WorkResponse) (*CloseResponse, error) {
+func (UnimplementedHubServer) Close(context.Context, *CloseRequest) (*CloseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
+}
+func (UnimplementedHubServer) Fail(context.Context, *FailRequest) (*FailResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Fail not implemented")
 }
 func (UnimplementedHubServer) mustEmbedUnimplementedHubServer() {}
 
@@ -104,20 +119,20 @@ func RegisterHubServer(s grpc.ServiceRegistrar, srv HubServer) {
 	s.RegisterService(&Hub_ServiceDesc, srv)
 }
 
-func _Hub_SubmitNewJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NewJobRequest)
+func _Hub_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(HubServer).SubmitNewJob(ctx, in)
+		return srv.(HubServer).Add(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Hub_SubmitNewJob_FullMethodName,
+		FullMethod: Hub_Add_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubServer).SubmitNewJob(ctx, req.(*NewJobRequest))
+		return srv.(HubServer).Add(ctx, req.(*AddRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -141,7 +156,7 @@ func _Hub_Pop_Handler(srv interface{}, ctx context.Context, dec func(interface{}
 }
 
 func _Hub_Close_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(WorkResponse)
+	in := new(CloseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -153,7 +168,25 @@ func _Hub_Close_Handler(srv interface{}, ctx context.Context, dec func(interface
 		FullMethod: Hub_Close_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubServer).Close(ctx, req.(*WorkResponse))
+		return srv.(HubServer).Close(ctx, req.(*CloseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Hub_Fail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HubServer).Fail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Hub_Fail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HubServer).Fail(ctx, req.(*FailRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -162,12 +195,12 @@ func _Hub_Close_Handler(srv interface{}, ctx context.Context, dec func(interface
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Hub_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "hub.hub",
+	ServiceName: "wire.hub",
 	HandlerType: (*HubServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SubmitNewJob",
-			Handler:    _Hub_SubmitNewJob_Handler,
+			MethodName: "Add",
+			Handler:    _Hub_Add_Handler,
 		},
 		{
 			MethodName: "Pop",
@@ -177,7 +210,11 @@ var Hub_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "Close",
 			Handler:    _Hub_Close_Handler,
 		},
+		{
+			MethodName: "Fail",
+			Handler:    _Hub_Fail_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "protos/jobs.proto",
+	Metadata: "wire/jobs.proto",
 }

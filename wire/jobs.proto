@@ -1,0 +1,66 @@
+syntax = "proto3";
+package wire;
+
+option go_package = "github.com/jpoz/protojob/wire";
+
+// Job data structure
+message Job {
+  // required
+  string uuid = 1;
+  string type = 2;
+  string queue = 3;
+  bytes payload = 4;
+
+  // optional
+  string parent_uuid = 5;
+  string predecessor_uuid = 6;
+}
+
+message Error {
+  string message = 1;
+}
+
+message AddRequest {
+  string type = 1;
+  bytes payload = 2;
+  string queue = 3;
+
+  // optional
+  string parent_uuid = 4;
+  string predecessor_uuid = 5;
+}
+
+message AddResponse {
+  bool success = 1;
+  string message = 2;
+  Job job = 3;
+}
+
+message PopRequest {
+  repeated string full_names = 1;
+}
+
+message WorkRequest {
+  Job job = 1;
+}
+
+message CloseRequest {
+  Job job = 1;
+}
+message CloseResponse {
+  bool closed = 1;
+}
+
+message FailRequest {
+  string uuid = 1;
+  string message = 2;
+}
+message FailResponse {}
+
+
+service hub {
+  rpc Add(AddRequest) returns (AddResponse);
+  rpc Pop(PopRequest) returns (WorkRequest);
+  rpc Close(CloseRequest) returns (CloseResponse);
+  rpc Fail(FailRequest) returns (FailResponse);
+}

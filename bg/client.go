@@ -3,14 +3,14 @@ package bg
 import (
 	"context"
 
-	"github.com/jpoz/protojob/protos"
+	"github.com/jpoz/protojob/wire"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 )
 
-type Client struct {
-	hub  protos.HubClient
+type HubClient struct {
+	hub  wire.HubClient
 	conn *grpc.ClientConn
 }
 
@@ -18,7 +18,7 @@ type Result struct {
 	Uuid string
 }
 
-func NewClient(hubAddr string) *Client {
+func NewClient(hubAddr string) *HubClient {
 	var opts []grpc.DialOption
 
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -27,16 +27,17 @@ func NewClient(hubAddr string) *Client {
 		panic(err)
 	}
 
-	return &Client{
-		hub: protos.NewHubClient(conn),
+	return &HubClient{
+		hub:  wire.NewHubClient(conn),
+		conn: conn,
 	}
 }
 
-func (c *Client) Close() error {
+func (c *HubClient) Close() error {
 	return c.conn.Close()
 }
 
-func (c *Client) Enqueue(ctx context.Context, msg proto.Message) (*Result, error) {
+func (c *HubClient) Enqueue(ctx context.Context, msg proto.Message) (*Result, error) {
 	payload, err := proto.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -44,12 +45,55 @@ func (c *Client) Enqueue(ctx context.Context, msg proto.Message) (*Result, error
 
 	msgName := proto.MessageName(msg)
 
-	req := &protos.NewJobRequest{
-		FullName: string(msgName),
-		Payload:  payload,
+	req := &wire.AddRequest{
+		Type:    string(msgName),
+		Queue:   string(msgName),
+		Payload: payload,
 	}
 
-	resp, err := c.hub.SubmitNewJob(ctx, req)
+	return c.add(ctx, req)
+}
+
+func (c *HubClient) EnqueueChild(ctx context.Context, msg proto.Message) (*Result, error) {
+	parent := Job(ctx)
+	payload, err := proto.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+
+	msgName := proto.MessageName(msg)
+
+	req := &wire.AddRequest{
+		Type:       string(msgName),
+		Queue:      string(msgName),
+		Payload:    payload,
+		ParentUuid: parent.Uuid,
+	}
+
+	return c.add(ctx, req)
+}
+
+func (c *HubClient) EnqueueHeir(ctx context.Context, msg proto.Message) (*Result, error) {
+	predecessor := Job(ctx)
+	payload, err := proto.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+
+	msgName := proto.MessageName(msg)
+
+	req := &wire.AddRequest{
+		Type:            string(msgName),
+		Queue:           string(msgName),
+		Payload:         payload,
+		PredecessorUuid: predecessor.Uuid,
+	}
+
+	return c.add(ctx, req)
+}
+
+func (c *HubClient) add(ctx context.Context, request *wire.AddRequest) (*Result, error) {
+	resp, err := c.hub.Add(ctx, request)
 	if err != nil {
 		return nil, err
 	}

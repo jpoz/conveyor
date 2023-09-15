@@ -17,9 +17,9 @@ RESET  := $(shell tput -Txterm sgr0)
 .PHONY: all
 all: help
 
-.PHONY: install
 
 ## Initial
+.PHONY: install
 install: ## install dependencies
 	brew install pre-commit protobuf
 	pre-commit install
@@ -37,9 +37,17 @@ install: ## install dependencies
 docker: ## setup docker
 	docker-compose up -d
 
+.PHONY: docker-down
+docker-down: ## shutdown docker
+	docker-compose down
+
+.PHONY: docker-clean
+docker-clean: ## nuke the docker-compose and volumes
+	docker-compose down -v
+
 .PHONY: hub
-hub: ## Run helloworld example hub
-	go run cmd/hub/main.go -c dev_config.yml
+hub: docker ## Run hub
+	$(GOCMD) run cmd/hub/main.go -c dev_config.yml
 
 ## Gen
 .PHONY: gen_protos
@@ -50,9 +58,17 @@ gen_protos: ## Generate protobuf models
 			${PROTO_FILES}
 
 ## Tests
+.PHONY: tests
+tests: ## Run tests
+	$(GOTEST) -cover -coverprofile=coverage.out -race ./...
+
+.PHONY: cover
+cover: tests ## Generate coverage report
+	$(GOCMD) tool cover -html=coverage.out
+
 .PHONY: integration
-integration: ## Run tests
-	./run_tests.sh
+integration: ## Run tests + integration
+	./run-tests.sh
 
 
 ## Help:

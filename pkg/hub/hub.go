@@ -5,18 +5,14 @@ import (
 	"log"
 	"net"
 	"os"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 	"gopkg.in/yaml.v3"
 
-	"github.com/jpoz/protojob/protos"
+	"github.com/jpoz/protojob/wire"
 )
 
 type Config struct {
@@ -25,11 +21,12 @@ type Config struct {
 }
 
 type Server struct {
-	log    *logrus.Logger // TODO make this a interface
-	config Config
-	rdb    *redis.Client
+	log     *logrus.Logger // TODO make this a interface
+	config  Config
+	rdb     *redis.Client
+	storage StorageHandler
 
-	protos.UnimplementedHubServer
+	wire.UnimplementedHubServer
 }
 
 func ReadConfig(path string) (Config, error) {
@@ -63,36 +60,44 @@ func NewServer(cfg Config) (*Server, error) {
 		return nil, err
 	}
 
+	redisStorageHandler := NewRedisStorageHandler(log, rdb)
+
 	srv := &Server{
-		log:    log,
-		config: cfg,
-		rdb:    rdb,
+		log:     log,
+		config:  cfg,
+		rdb:     rdb,
+		storage: redisStorageHandler,
 	}
 
 	return srv, nil
 }
 
-func (s *Server) SubmitNewJob(ctx context.Context, newJob *protos.NewJobRequest) (*protos.NewJobResponse, error) {
-	s.log.WithFields(logrus.Fields{"job": newJob.FullName}).Info("Received job")
-
+func (s *Server) Add(ctx context.Context, newJob *wire.AddRequest) (*wire.AddResponse, error) {
 	jid := uuid.New()
-	job := &protos.Job{
-		Uuid:     jid.String(),
-		FullName: newJob.FullName,
-		Payload:  newJob.Payload,
+	job := &wire.Job{
+		Uuid:            jid.String(),
+		Type:            newJob.Type,
+		Queue:           newJob.Queue,
+		Payload:         newJob.Payload,
+		PredecessorUuid: newJob.PredecessorUuid,
+		ParentUuid:      newJob.ParentUuid,
 	}
 
-	jobBytes, err := proto.Marshal(job)
+	entry := s.log.WithFields(logrus.Fields{"job": job.Type, "uuid": job.Uuid, "queue": job.Queue})
+
+	err := s.storage.AddJob(ctx, job)
 	if err != nil {
-		return nil, err
+		entry.Error(err)
+		response := &wire.AddResponse{
+			Success: false,
+			Message: err.Error(),
+		}
+		return response, nil
 	}
 
-	err = s.rdb.LPush(ctx, "jobs", jobBytes).Err()
-	if err != nil {
-		return nil, err
-	}
+	entry.Info("Added")
 
-	response := &protos.NewJobResponse{
+	response := &wire.AddResponse{
 		Success: true,
 		Message: "Job submitted",
 		Job:     job,
@@ -100,31 +105,32 @@ func (s *Server) SubmitNewJob(ctx context.Context, newJob *protos.NewJobRequest)
 	return response, nil
 }
 
-func (s *Server) Pop(ctx context.Context, req *protos.PopRequest) (*protos.WorkRequest, error) {
-	payload, err := s.rdb.BRPop(ctx, 2*time.Second, "jobs").Result()
-	if err == redis.Nil {
-		return &protos.WorkRequest{}, nil
-	}
-
-	jobStr := payload[1]
-
+func (s *Server) Pop(ctx context.Context, req *wire.PopRequest) (*wire.WorkRequest, error) {
+	out := &wire.WorkRequest{}
+	queues := toQueueNames(req.FullNames)
+	job, err := s.storage.Pop(ctx, queues...)
 	if err != nil {
-		return nil, err
+		return out, err
+	}
+	if job == nil {
+		return out, nil
 	}
 
-	job := &protos.Job{}
-	err = proto.Unmarshal([]byte(jobStr), job)
-	if err != nil {
-		return nil, err
-	}
-
-	s.log.WithFields(logrus.Fields{"job": job.FullName, "uuid": job.Uuid}).Info("Sending out job")
-
-	return &protos.WorkRequest{Job: job}, nil
+	s.log.WithFields(logrus.Fields{"job": job.Type, "uuid": job.Uuid, "queue": job.Queue}).Info("Pop")
+	out.Job = job
+	return out, nil
 }
 
-func (s *Server) Close(context.Context, *protos.WorkResponse) (*protos.CloseResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
+func (s *Server) Close(ctx context.Context, req *wire.CloseRequest) (*wire.CloseResponse, error) {
+	s.log.WithField("uuid", req.Job.Uuid).Info("Close")
+	closed, err := s.storage.CloseJob(ctx, req.Job)
+	return &wire.CloseResponse{Closed: closed}, err
+}
+
+func (s *Server) Fail(ctx context.Context, req *wire.FailRequest) (*wire.FailResponse, error) {
+	s.log.WithField("uuid", req.Uuid).Error("Fail")
+	err := s.storage.FailJob(ctx, req.Uuid)
+	return &wire.FailResponse{}, err
 }
 
 func (s *Server) Listen(ctx context.Context) error {
@@ -137,7 +143,7 @@ func (s *Server) Listen(ctx context.Context) error {
 
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
-	protos.RegisterHubServer(grpcServer, s)
+	wire.RegisterHubServer(grpcServer, s)
 
 	// Create a channel to receive any error from grpcServer.Serve()
 	errCh := make(chan error, 1)
