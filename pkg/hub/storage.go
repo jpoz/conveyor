@@ -39,7 +39,7 @@ func NewRedisStorageHandler(log *logrus.Logger, client *redis.Client) StorageHan
 }
 
 func (s *redisStorageHandler) GetJob(ctx context.Context, uuid string) (*wire.Job, error) {
-	jobBytes, err := s.rdb.Get(ctx, toJobKey(uuid)).Result()
+	jobBytes, err := s.rdb.Get(ctx, jobKey(uuid)).Result()
 	if err == redis.Nil {
 		return nil, nil
 	}
@@ -74,7 +74,7 @@ func (s *redisStorageHandler) Pop(ctx context.Context, queues ...string) (*wire.
 		return nil, err
 	}
 
-	err = s.rdb.Set(ctx, toJobKey(job.Uuid), payload[1], 0).Err()
+	err = s.rdb.Set(ctx, jobKey(job.Uuid), payload[1], 0).Err()
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (s *redisStorageHandler) CloseJob(ctx context.Context, job *wire.Job) (bool
 		}
 	}
 
-	err = s.rdb.Del(ctx, toJobKey(job.Uuid)).Err()
+	err = s.rdb.Del(ctx, jobKey(job.Uuid)).Err()
 	if err != nil {
 		return false, err
 	}
@@ -200,7 +200,7 @@ func (s *redisStorageHandler) CloseJob(ctx context.Context, job *wire.Job) (bool
 }
 
 func (s *redisStorageHandler) FailJob(ctx context.Context, uuid string) error {
-	str, err := s.rdb.Get(ctx, toJobKey(uuid)).Result()
+	str, err := s.rdb.Get(ctx, jobKey(uuid)).Result()
 	if err != nil {
 		return err
 	}

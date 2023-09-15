@@ -189,7 +189,7 @@ func (w *Worker) Run(ctx context.Context) error {
 
 	for {
 		resp, err := w.hub.Pop(ctx, &wire.PopRequest{
-			FullNames: w.registeredFullNames,
+			Queues: w.registeredFullNames,
 		})
 		if err != nil {
 			logrus.Error(err)

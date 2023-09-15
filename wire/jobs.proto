@@ -37,7 +37,7 @@ message AddResponse {
 }
 
 message PopRequest {
-  repeated string full_names = 1;
+  repeated string queues = 1;
 }
 
 message WorkRequest {

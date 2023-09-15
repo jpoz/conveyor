@@ -4,19 +4,7 @@ import (
 	"fmt"
 )
 
-func toQueueName(fullName string) string {
-	return fullName
-}
-
-func toQueueNames(fullNames []string) []string {
-	result := make([]string, 0, len(fullNames))
-	for _, name := range fullNames {
-		result = append(result, toQueueName(name))
-	}
-	return result
-}
-
-func toJobKey(uuid string) string {
+func jobKey(uuid string) string {
 	return fmt.Sprintf("job:%s", uuid)
 }
 

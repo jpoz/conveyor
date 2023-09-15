@@ -107,8 +107,7 @@ func (s *Server) Add(ctx context.Context, newJob *wire.AddRequest) (*wire.AddRes
 
 func (s *Server) Pop(ctx context.Context, req *wire.PopRequest) (*wire.WorkRequest, error) {
 	out := &wire.WorkRequest{}
-	queues := toQueueNames(req.FullNames)
-	job, err := s.storage.Pop(ctx, queues...)
+	job, err := s.storage.Pop(ctx, req.Queues...)
 	if err != nil {
 		return out, err
 	}
