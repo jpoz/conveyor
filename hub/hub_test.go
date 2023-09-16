@@ -86,7 +86,7 @@ func TestSubmitNewJob_withParent(t *testing.T) {
 	}
 	rdb := redis.NewClient(redisOpts)
 
-	list, err := rdb.LRange(ctx, "foo.Bar", 0, -1).Result()
+	list, err := rdb.LRange(ctx, "job:1234-5678-9012-3456:children", 0, -1).Result()
 	assert.NoError(t, err)
 	assert.Len(t, list, 1)
 

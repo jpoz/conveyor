@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/jpoz/protojob/wire"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
@@ -12,6 +13,7 @@ import (
 type HubClient struct {
 	Hub  wire.HubClient
 	conn *grpc.ClientConn
+	log  *logrus.Entry
 }
 
 type Result struct {
@@ -30,6 +32,7 @@ func NewClient(hubAddr string) *HubClient {
 	return &HubClient{
 		Hub:  wire.NewHubClient(conn),
 		conn: conn,
+		log:  logrus.WithField("client", "hub"),
 	}
 }
 

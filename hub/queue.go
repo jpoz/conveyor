@@ -8,10 +8,14 @@ func jobKey(uuid string) string {
 	return fmt.Sprintf("job:%s", uuid)
 }
 
-func childenSetKey(parentUuid string) string {
+func childenListKey(parentUuid string) string {
 	return fmt.Sprintf("job:%s:children", parentUuid)
 }
 
-func heirListKey(predecessorUuid string) string {
-	return fmt.Sprintf("job:%s:heirs", predecessorUuid)
+func childenSetKey(parentUuid string) string {
+	return fmt.Sprintf("job:%s:active", parentUuid)
+}
+
+func onCompleteListKey(predecessorUuid string) string {
+	return fmt.Sprintf("job:%s:onComplete", predecessorUuid)
 }

@@ -135,9 +135,7 @@ func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
 		return fmt.Errorf("job %s failed: %w", job.Uuid, err)
 	}
 
-	_, err = w.hub.Close(ctx, &wire.CloseRequest{
-		Job: job,
-	})
+	_, err = w.hub.Close(ctx, &wire.CloseRequest{Job: job})
 	if err != nil {
 		return fmt.Errorf("failed to close job %s: %w", job.Uuid, err)
 	}
