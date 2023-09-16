@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/jpoz/protojob/pkg/hub"
+	"github.com/jpoz/protojob/hub"
 	"github.com/jpoz/protojob/wire"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
@@ -18,9 +18,12 @@ func TestSubmitNewJob(t *testing.T) {
 	s := miniredis.RunT(t)
 	redisURL := fmt.Sprintf("redis://%s", s.Addr())
 
-	hub, err := hub.NewServer(hub.Config{
-		RedisURL: redisURL,
-	})
+	hub, err := hub.NewServer(
+		hub.ServerArgs{},
+		hub.Config{
+			RedisURL: redisURL,
+		},
+	)
 	assert.NoError(t, err)
 
 	resp, err := hub.Add(ctx, &wire.AddRequest{
@@ -59,9 +62,12 @@ func TestSubmitNewJob_withParent(t *testing.T) {
 	s := miniredis.RunT(t)
 	redisURL := fmt.Sprintf("redis://%s", s.Addr())
 
-	hub, err := hub.NewServer(hub.Config{
-		RedisURL: redisURL,
-	})
+	hub, err := hub.NewServer(
+		hub.ServerArgs{},
+		hub.Config{
+			RedisURL: redisURL,
+		},
+	)
 	assert.NoError(t, err)
 
 	resp, err := hub.Add(ctx, &wire.AddRequest{

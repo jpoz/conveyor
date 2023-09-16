@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/jpoz/protojob/pkg/hub"
+	"github.com/jpoz/protojob/hub"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server, err := hub.NewServer(config)
+	server, err := hub.NewServer(opts, config)
 	if err != nil {
 		log.Fatal(err)
 	}

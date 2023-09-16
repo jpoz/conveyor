@@ -12,6 +12,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const DefaultMaxRetries int32 = 3
+
 var ErrNoJob = errors.New("the job given was nil")
 var ErrNoQueue = errors.New("the queue in the job is blank, there must be a queue")
 var ErrNoType = errors.New("there was no type given in the job")
@@ -27,14 +29,18 @@ type StorageHandler interface {
 }
 
 type redisStorageHandler struct {
-	rdb *redis.Client
-	log *logrus.Entry
+	rdb          *redis.Client
+	log          *logrus.Entry
+	scheduledKey string
+	failedKey    string
 }
 
 func NewRedisStorageHandler(log *logrus.Logger, client *redis.Client) StorageHandler {
 	return &redisStorageHandler{
-		rdb: client,
-		log: log.WithField("storage", "redis"),
+		rdb:          client,
+		log:          log.WithField("storage", "redis"),
+		scheduledKey: "scheduled",
+		failedKey:    "failed",
 	}
 }
 
@@ -74,9 +80,9 @@ func (s *redisStorageHandler) Pop(ctx context.Context, queues ...string) (*wire.
 		return nil, err
 	}
 
-	err = s.rdb.Set(ctx, jobKey(job.Uuid), payload[1], 0).Err()
+	err = s.setJob(ctx, job.Uuid, []byte(payload[1]))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to store job in redis: %v", err)
 	}
 
 	return job, nil
@@ -207,6 +213,50 @@ func (s *redisStorageHandler) FailJob(ctx context.Context, uuid string) error {
 
 	job := &wire.Job{}
 	err = proto.Unmarshal([]byte(str), job)
+	if err != nil {
+		return err
+	}
+
+	maxRetries := DefaultMaxRetries
+	if job.MaxRetries != 0 {
+		maxRetries = job.MaxRetries
+	}
+
+	if job.Retry >= maxRetries {
+		// already failed
+		// TODO send to failed queue
+		return nil
+	}
+
+	retryAt := time.Now().Add(RetryIn(job))
+	job.Retry++
+
+	jobBytes, err := marshalJob(job)
+	if err != nil {
+		return err
+	}
+
+	pipe := s.rdb.Pipeline()
+
+	pipe.Del(ctx, jobKey(uuid))
+	pipe.Del(ctx, heirListKey(uuid))
+	pipe.ZAdd(ctx, s.failedKey, redis.Z{Score: float64(retryAt.Unix()), Member: jobBytes})
+
+	cmdErrs, err := pipe.Exec(ctx)
+	if err != nil {
+		return err
+	}
+	for _, err := range cmdErrs {
+		if err != nil {
+			return err.Err()
+		}
+	}
+
+	return nil
+}
+
+func (s *redisStorageHandler) setJob(ctx context.Context, uuid string, jobBytes []byte) error {
+	err := s.rdb.Set(ctx, jobKey(uuid), jobBytes, 0).Err()
 	if err != nil {
 		return err
 	}

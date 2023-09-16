@@ -49,6 +49,10 @@ docker-clean: ## nuke the docker-compose and volumes
 hub: docker ## Run hub
 	$(GOCMD) run cmd/hub/main.go -c dev_config.yml
 
+.PHONY: debug_hub
+debug_hub: docker ## Run hub
+	$(GOCMD) run cmd/hub/main.go -v -c dev_config.yml
+
 ## Gen
 .PHONY: gen
 gen: ## Generate protobuf models
@@ -73,7 +77,6 @@ cover: tests ## Generate coverage report
 .PHONY: integration
 integration: ## Run tests + integration
 	./run-tests.sh
-
 
 ## Help:
 .PHONY: help

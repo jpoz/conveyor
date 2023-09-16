@@ -44,11 +44,14 @@ func ReadConfig(path string) (Config, error) {
 	return config, nil
 }
 
-func NewServer(cfg Config) (*Server, error) {
+func NewServer(args ServerArgs, cfg Config) (*Server, error) {
 	log := logrus.New()
-	log.SetLevel(logrus.DebugLevel)
-
+	log.SetLevel(logrus.InfoLevel)
 	log.Printf("hub config: %+v", cfg)
+
+	if args.Verbose {
+		log.SetLevel(logrus.DebugLevel)
+	}
 
 	redisOpts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
@@ -61,6 +64,8 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	redisStorageHandler := NewRedisStorageHandler(log, rdb)
+
+	log.Printf("level: %+v", log.GetLevel())
 
 	srv := &Server{
 		log:     log,
@@ -127,7 +132,7 @@ func (s *Server) Close(ctx context.Context, req *wire.CloseRequest) (*wire.Close
 }
 
 func (s *Server) Fail(ctx context.Context, req *wire.FailRequest) (*wire.FailResponse, error) {
-	s.log.WithField("uuid", req.Uuid).Error("Fail")
+	s.log.WithField("uuid", req.Uuid).Warn("Fail")
 	err := s.storage.FailJob(ctx, req.Uuid)
 	return &wire.FailResponse{}, err
 }
@@ -144,21 +149,17 @@ func (s *Server) Listen(ctx context.Context) error {
 	grpcServer := grpc.NewServer(opts...)
 	wire.RegisterHubServer(grpcServer, s)
 
-	// Create a channel to receive any error from grpcServer.Serve()
 	errCh := make(chan error, 1)
 
-	// Run grpcServer.Serve in a separate goroutine
 	go func() {
 		errCh <- grpcServer.Serve(lis)
 	}()
 
-	// Listen for ctx.Done() in another goroutine
 	go func() {
 		<-ctx.Done()
 		grpcServer.GracefulStop()
 	}()
 
-	// Wait for either grpcServer.Serve to finish or ctx.Done() to be closed
 	select {
 	case err := <-errCh:
 		return err

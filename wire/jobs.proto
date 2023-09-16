@@ -1,6 +1,8 @@
 syntax = "proto3";
 package wire;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/jpoz/protojob/wire";
 
 // Job data structure
@@ -12,12 +14,15 @@ message Job {
   bytes payload = 4;
 
   // optional
-  string parent_uuid = 5;
-  string predecessor_uuid = 6;
-}
+  google.protobuf.Timestamp run_at = 5;
+  string parent_uuid = 6;
+  string predecessor_uuid = 7;
 
-message Error {
-  string message = 1;
+  // internal
+  google.protobuf.Timestamp started_at = 8;
+  int32 retry = 9;
+  int32 max_retries = 10;
+  string last_failure = 11;
 }
 
 message AddRequest {

@@ -35,7 +35,7 @@ func TestBasic(t *testing.T) {
 			Addr:     addr,
 			RedisURL: "redis://localhost:6382",
 		}
-		server, err := hub.NewServer(args)
+		server, err := hub.NewServer(hub.ServerArgs{}, args)
 		fmt.Println("server created")
 		wg.Done()
 		if err != nil {
