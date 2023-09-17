@@ -1,4 +1,4 @@
-package hub_test
+package storage_test
 
 import (
 	"fmt"

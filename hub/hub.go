@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 
+	"github.com/jpoz/protojob/storage"
 	"github.com/jpoz/protojob/wire"
 )
 
@@ -24,7 +25,7 @@ type Server struct {
 	log     *logrus.Logger // TODO make this a interface
 	config  Config
 	rdb     *redis.Client
-	storage StorageHandler
+	storage storage.Handler
 
 	wire.UnimplementedHubServer
 }
@@ -63,7 +64,7 @@ func NewServer(args ServerArgs, cfg Config) (*Server, error) {
 		return nil, err
 	}
 
-	redisStorageHandler := NewRedisStorageHandler(log, rdb)
+	redisStorageHandler := storage.NewRedisHandler(log, rdb)
 
 	log.Printf("level: %+v", log.GetLevel())
 
