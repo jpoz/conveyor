@@ -7,6 +7,7 @@ GOVET=$(GOCMD) vet
 SERVICE_PORT?=9000
 
 PROTO_FILES:=$(shell find . -type f -name "*.proto" -print)
+GO_PKGS:=$(shell go list ./... | grep -v github.com/jpoz/protojob/examples/ | grep -v github.com/jpoz/protojob/fixtures/ | grep -v github.com/jpoz/protojob/integration/)
 
 GREEN  := $(shell tput -Txterm setaf 2)
 YELLOW := $(shell tput -Txterm setaf 3)
@@ -65,13 +66,13 @@ gen_protos: ## Generate protobuf models
 			--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 			${PROTO_FILES}
 
-## Tests
-.PHONY: tests
-tests: ## Run tests
-	$(GOTEST) -cover -coverprofile=coverage.out -race ./...
+## Test
+.PHONY: test
+test: ## Run tests
+	$(GOTEST) -run 'Test*' -cover -coverprofile=coverage.out -race ${GO_PKGS}
 
 .PHONY: cover
-cover: tests ## Generate coverage report
+cover: test ## Generate coverage report
 	$(GOCMD) tool cover -html=coverage.out
 
 .PHONY: integration

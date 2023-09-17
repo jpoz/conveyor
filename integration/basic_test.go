@@ -13,7 +13,7 @@ import (
 
 	"github.com/jpoz/protojob/bg"
 	"github.com/jpoz/protojob/fixtures"
-	"github.com/jpoz/protojob/pkg/hub"
+	"github.com/jpoz/protojob/hub"
 	"github.com/stretchr/testify/assert"
 )
 

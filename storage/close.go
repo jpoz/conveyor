@@ -29,13 +29,13 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 			break
 		}
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("%w getting child jobs: %s", ErrFatalError, err)
 		}
 
 		childJob := &wire.Job{}
 		err = proto.Unmarshal([]byte(childJobBytes), childJob)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("%w invalid child payload: %s", ErrFatalError, err)
 		}
 
 		log.Debug("Adding child")
@@ -58,7 +58,7 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 	childCount, err := s.rdb.SCard(ctx, childenSetKey(job.Uuid)).Result()
 	if err != redis.Nil {
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("%w getting child count: %s", ErrFatalError, err)
 		}
 		if childCount > 0 {
 			// children are still running
@@ -75,13 +75,13 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 			break
 		}
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("%w getting onComplete jobs: %s", ErrFatalError, err)
 		}
 
 		onCompleteJob := &wire.Job{}
 		err = proto.Unmarshal([]byte(onCompleteJobBytes), onCompleteJob)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("%w invalid onComplete payload: %s", ErrFatalError, err)
 		}
 
 		log.Debug("Adding onComplete job")
@@ -90,6 +90,8 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 			return false, fmt.Errorf("could not add onComplete job: %w", err)
 		}
 	}
+
+	parentClosed := false
 
 	// If the job has a parent, remove itself from the children, close the parent
 	if job.ParentUuid != "" {
@@ -108,17 +110,19 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 		}
 
 		log.Debug("Closing parent")
-		_, err = s.CloseJob(ctx, parentJob)
+		parentClosed, err = s.CloseJob(ctx, parentJob)
 		if err != nil {
 			return false, err
 		}
+	} else {
+		parentClosed = true
 	}
 
 	err = s.rdb.Del(ctx, jobKey(job.Uuid)).Err()
 	if err != nil {
 		return false, err
 	}
-
 	log.Debug("Job closed")
-	return true, nil
+
+	return parentClosed, nil
 }

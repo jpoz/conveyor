@@ -30,7 +30,7 @@ func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) 
 		// Parent is still running, add to children list
 		err = s.rdb.LPush(ctx, childenListKey(job.ParentUuid), jobBytes).Err()
 		if err != nil {
-			return err
+			return fmt.Errorf("%w add failed to add to children list: %v", ErrFatalError, err)
 		}
 		return nil
 	} else if job.PredecessorUuid != "" && !deadParent {
@@ -55,7 +55,7 @@ func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) 
 
 	err = s.rdb.LPush(ctx, job.Queue, jobBytes).Err()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w failed to add to job to queue: %v", ErrFatalError, err)
 	}
 
 	return nil
