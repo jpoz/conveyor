@@ -49,7 +49,11 @@ docker-clean: ## nuke the docker-compose and volumes
 	docker-compose down -v
 
 .PHONY: hub
-hub: docker ## Run hub
+hub: docker  ## Run hub
+	$(GOCMD) run cmd/hub/main.go -c dev_config.yml
+
+.PHONY: hub_ui
+hub_ui: docker ui_build ## Run hub (rebuild ui first)
 	$(GOCMD) run cmd/hub/main.go -c dev_config.yml
 
 .PHONY: debug_hub
@@ -67,7 +71,6 @@ ui_install: ## Install UI
 .PHONY: ui_build
 ui_build: ## Build UI
 	cd ui && npm run build
-
 
 ## Gen
 .PHONY: gen
