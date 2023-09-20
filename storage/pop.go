@@ -33,5 +33,12 @@ func (s *redisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, er
 		return nil, fmt.Errorf("failed to store job in redis: %v", err)
 	}
 
+	err = s.addActiveJob(ctx, job)
+	if err != nil {
+		// TODO try to readd job to queue?
+		s.log.Errorf("failed to add job as active in redis: %v", err)
+		return job, fmt.Errorf("failed to add job as active in redis: %v", err)
+	}
+
 	return job, nil
 }

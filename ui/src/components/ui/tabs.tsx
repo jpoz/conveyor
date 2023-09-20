@@ -1,10 +1,10 @@
 import React from 'react';
 
-function classNames(...classes) {
+function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ')
 }
 
-export function Tabs({ children }) {
+export function Tabs({ children }: { children: React.ReactNode }) {
   return (
     <div>
       <div className="block">

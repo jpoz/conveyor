@@ -4,6 +4,9 @@ import (
 	"fmt"
 )
 
+const activeQueuesKey = "queues:active"
+const activeJobsKey = "jobs:active"
+
 func jobKey(uuid string) string {
 	return fmt.Sprintf("job:%s", uuid)
 }

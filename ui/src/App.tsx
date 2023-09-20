@@ -2,16 +2,18 @@ import {
   createBrowserRouter,
   RouterProvider,
   Outlet,
+  useMatch,
 } from "react-router-dom"
 import './App.css'
-import Home from './Home'
-import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { Tabs, Tab } from '@/components/ui/Tabs'
+import Home from '@/Home'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Tabs, Tab } from '@/components/ui/tabs'
 import { ThemeProvider } from "@/components/theme-provider"
 import { ModeToggle } from "@/components/mode-toggle"
 
-import { BuildingOfficeIcon, CreditCardIcon, UserIcon, UsersIcon } from '@heroicons/react/20/solid'
+import { AreaChart, Tractor} from 'lucide-react'
+
 
 const router = createBrowserRouter([
   {
@@ -23,7 +25,7 @@ const router = createBrowserRouter([
         element: <Home />,
       },
       {
-        path: "team",
+        path: "workers",
         element: <Team />,
       },
     ],
@@ -44,11 +46,12 @@ function Root() {
       <Card>
         <div className="flex items-center justify-between p-6">
           <Tabs>
-            <Tab key="Home" href="/" icon={UserIcon} active>Home</Tab>
-            <Tab key="Team" href="/team" icon={UsersIcon}>Team</Tab>
+            <Tab key="Home" href="/" icon={AreaChart} active={!!useMatch("/")}>Home</Tab>
+            <Tab key="Home" href="/workers" icon={Tractor} active={!!useMatch("/workers")}>Workers</Tab>
           </Tabs>
           <ModeToggle />
         </div>
+
         <Outlet />
       </Card>
     </div>
