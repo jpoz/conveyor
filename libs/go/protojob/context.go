@@ -1,4 +1,4 @@
-package bg
+package protojob
 
 import (
 	"context"

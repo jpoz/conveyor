@@ -1,11 +1,11 @@
-package bg_test
+package protojob_test
 
 import (
 	"context"
 	"testing"
 
-	"github.com/jpoz/protojob/bg"
 	"github.com/jpoz/protojob/fixtures"
+	"github.com/jpoz/protojob/libs/go/protojob"
 	"github.com/jpoz/protojob/wire"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -17,7 +17,7 @@ func TestEnqueue(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockClient := wire.NewMockHubClient(ctrl)
-	client := &bg.HubClient{
+	client := &protojob.HubClient{
 		Hub: mockClient,
 	}
 

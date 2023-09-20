@@ -6,18 +6,18 @@ import (
 	"log"
 
 	"github.com/jpoz/protojob/_examples/helloworld/hello"
-	"github.com/jpoz/protojob/bg"
+	"github.com/jpoz/protojob/libs/go/protojob"
 )
 
 func helloJob(ctx context.Context, msg *hello.HelloJob) error {
-	job := bg.Job(ctx)
+	job := protojob.Job(ctx)
 
 	fmt.Printf("%s %s %s\n", job.Uuid, msg.Greeting, msg.Name)
 	return nil
 }
 
 func main() {
-	w := bg.NewWorker("localhost:8080")
+	w := protojob.NewWorker("localhost:8080")
 
 	err := w.RegisterJob(helloJob)
 	if err != nil {

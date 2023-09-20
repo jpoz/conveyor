@@ -10,15 +10,15 @@ import (
 	"time"
 
 	"github.com/jpoz/protojob/_examples/chain/job"
-	"github.com/jpoz/protojob/bg"
+	"github.com/jpoz/protojob/libs/go/protojob"
 )
 
 var spawn int32 = 3
 var levels int32 = 3
 
 func mainJob(ctx context.Context, msg *job.MainJob) error {
-	j := bg.Job(ctx)
-	client := bg.Client(ctx)
+	j := protojob.Job(ctx)
+	client := protojob.Client(ctx)
 
 	_, err := client.EnqueueHeir(ctx, &job.LastJob{Level: 0})
 	if err != nil {
@@ -42,8 +42,8 @@ func mainJob(ctx context.Context, msg *job.MainJob) error {
 }
 
 func subJob(ctx context.Context, msg *job.SubJob) error {
-	j := bg.Job(ctx)
-	client := bg.Client(ctx)
+	j := protojob.Job(ctx)
+	client := protojob.Client(ctx)
 
 	time.Sleep(10 * time.Millisecond)
 
@@ -80,7 +80,7 @@ func subJob(ctx context.Context, msg *job.SubJob) error {
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	lastJob := func(ctx context.Context, msg *job.LastJob) error {
-		job := bg.Job(ctx)
+		job := protojob.Job(ctx)
 
 		for i := int32(0); i < msg.Level; i++ {
 			fmt.Print("\t")
@@ -90,7 +90,7 @@ func main() {
 	}
 
 	go func() {
-		w := bg.NewWorker("localhost:8080")
+		w := protojob.NewWorker("localhost:8080")
 
 		err := w.RegisterJobs(mainJob, subJob, lastJob)
 		if err != nil {
@@ -102,7 +102,7 @@ func main() {
 		}
 	}()
 
-	c := bg.NewClient("localhost:8080")
+	c := protojob.NewClient("localhost:8080")
 	_, err := c.Enqueue(ctx, &job.MainJob{
 		Spawn:  spawn,
 		Levels: levels,

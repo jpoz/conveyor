@@ -5,11 +5,11 @@ import (
 	"log"
 
 	"github.com/jpoz/protojob/_examples/helloworld/hello"
-	"github.com/jpoz/protojob/bg"
+	"github.com/jpoz/protojob/libs/go/protojob"
 )
 
 func main() {
-	client := bg.NewClient("localhost:8080")
+	client := protojob.NewClient("localhost:8080")
 
 	response, err := client.Enqueue(context.Background(), &hello.HelloJob{
 		Name:     "World",
