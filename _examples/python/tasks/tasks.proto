@@ -1,0 +1,14 @@
+syntax = "proto3";
+package tasks;
+
+message MainTask {
+  int32 num = 1;
+}
+
+message ChildTask {
+  int32 num = 1;
+}
+
+message OnCompleteTask {
+  int32 num = 1;
+}
