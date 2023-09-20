@@ -13,11 +13,13 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/jpoz/protojob/storage"
+	"github.com/jpoz/protojob/ui"
 	"github.com/jpoz/protojob/wire"
 )
 
 type Config struct {
 	Addr     string `yaml:"addr"`
+	UiAddr   string `yaml:"uiAddr"`
 	RedisURL string `yaml:"redisURL" json:"redisURL"`
 }
 
@@ -144,16 +146,25 @@ func (s *Server) Listen(ctx context.Context) error {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s.log.Printf("server listening at %v", lis.Addr())
-
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 	wire.RegisterHubServer(grpcServer, s)
 
+	uiCfg := ui.ServerConfig{
+		Addr: s.config.UiAddr,
+		Log:  s.log,
+	}
+	uiServer := ui.NewServer(uiCfg)
+
 	errCh := make(chan error, 1)
 
 	go func() {
+		s.log.Printf("wire listening at %v", lis.Addr())
 		errCh <- grpcServer.Serve(lis)
+	}()
+
+	go func() {
+		errCh <- uiServer.ListenAndServe()
 	}()
 
 	go func() {

@@ -32,6 +32,8 @@ install: ## install dependencies
 	go install github.com/chrusty/protoc-gen-jsonschema/cmd/protoc-gen-jsonschema@latest
 	go install github.com/jpoz/protoc-gen-go-sqljson/cmd/protoc-gen-go-sqljson@latest
 	go mod download
+	cd ui && npm install
+	pip install protobuf
 
 ## Dev
 .PHONY: docker
@@ -54,6 +56,19 @@ hub: docker ## Run hub
 debug_hub: docker ## Run hub
 	$(GOCMD) run cmd/hub/main.go -v -c dev_config.yml
 
+.PHONY: ui
+ui: ## Run UI
+	cd ui && VITE_API_URL=http://localhost:8080 npm run dev
+
+.PHONY: ui_install
+ui_install: ## Install UI
+	cd ui && npm i
+
+.PHONY: ui_build
+ui_build: ## Build UI
+	cd ui && npm run build
+
+
 ## Gen
 .PHONY: gen
 gen: ## Generate protobuf models
@@ -65,6 +80,7 @@ gen_protos: ## Generate protobuf models
 	protoc --go_out=. --go_opt=paths=source_relative \
 			--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 			${PROTO_FILES}
+	python -m grpc_tools.protoc -I=wire --python_out=./libs/py/protojob/wire --grpc_python_out=./libs/py/protojob/wire wire/*.proto
 
 ## Test
 .PHONY: test
