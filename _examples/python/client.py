@@ -1,4 +1,6 @@
 import protojob
+from tasks import MainTask
 
-with protojob.connection() as c:
-    print(c)
+with protojob.client() as c:
+    task = MainTask(num=5)
+    c.enqueue(task)
