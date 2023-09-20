@@ -5,6 +5,13 @@ import {
 } from "react-router-dom"
 import './App.css'
 import Home from './Home'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Tabs, Tab } from '@/components/ui/Tabs'
+import { ThemeProvider } from "@/components/theme-provider"
+import { ModeToggle } from "@/components/mode-toggle"
+
+import { BuildingOfficeIcon, CreditCardIcon, UserIcon, UsersIcon } from '@heroicons/react/20/solid'
 
 const router = createBrowserRouter([
   {
@@ -25,25 +32,34 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <RouterProvider router={router} />
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>
   )
 }
 
 function Root() {
   return (
     <div>
-      <h1>Root</h1>
-      {import.meta.env.VITE_API_URL}
-      <Outlet />
+      <Card>
+        <div className="flex items-center justify-between p-6">
+          <Tabs>
+            <Tab key="Home" href="/" icon={UserIcon} active>Home</Tab>
+            <Tab key="Team" href="/team" icon={UsersIcon}>Team</Tab>
+          </Tabs>
+          <ModeToggle />
+        </div>
+        <Outlet />
+      </Card>
     </div>
   )
 }
 
 function Team() {
-
   return (
     <div>
-      <h1>Team</h1>
+      <h1 className="text-3xl text-emerald-500">Team</h1>
+      <Button>Button</Button>
     </div>
   )
 }
