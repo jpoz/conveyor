@@ -2,6 +2,7 @@ package hub
 
 import (
 	context "context"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -135,10 +136,21 @@ func (s *Server) Close(ctx context.Context, req *wire.CloseRequest) (*wire.Close
 	return &wire.CloseResponse{Closed: closed}, err
 }
 
-func (s *Server) Fail(ctx context.Context, req *wire.FailRequest) (*wire.FailResponse, error) {
+func (s *Server) Fail(ctx context.Context, req *wire.FailRequest) (*wire.Empty, error) {
 	s.log.WithField("uuid", req.Uuid).Warn("Fail")
 	err := s.storage.FailJob(ctx, req.Uuid)
-	return &wire.FailResponse{}, err
+	return &wire.Empty{}, err
+}
+
+func (s *Server) Heartbeat(ctx context.Context, checkin *wire.Checkin) (*wire.Empty, error) {
+	s.log.WithField("worker", checkin.WorkerId).Debug("Heartbeat")
+
+	err := s.storage.Heartbeat(ctx, checkin.WorkerId)
+	if err != nil {
+		return nil, fmt.Errorf("could not heartbeat: %w", err)
+	}
+
+	return &wire.Empty{}, nil
 }
 
 func (s *Server) Listen(ctx context.Context) error {
@@ -175,6 +187,7 @@ func (s *Server) Listen(ctx context.Context) error {
 	}()
 
 	go s.Periodic(ctx, 30*time.Second, s.storage.PruneActiveQueues)
+	go s.Periodic(ctx, 30*time.Second, s.storage.PruneActiveWorkers)
 
 	select {
 	case err := <-errCh:

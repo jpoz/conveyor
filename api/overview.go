@@ -27,9 +27,16 @@ func (a *API) OverviewHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	activeWorkerCount, err := a.stats.ActiveWorkerCount(r.Context())
+	if err != nil {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, err)
+		return
+	}
+
 	render.JSON(w, r, OverviewResponse{
 		ActiveJobCount:       activeJobCount,
 		ActiveQueueCount:     activeQueueCount,
-		ConnectedWorkerCount: 0,
+		ConnectedWorkerCount: activeWorkerCount,
 	})
 }

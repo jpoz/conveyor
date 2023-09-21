@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jpoz/protojob/wire"
@@ -180,10 +181,31 @@ func (w *Worker) callJob(job *wire.Job) error {
 
 }
 
+func (w *Worker) Heartbeat(ctx context.Context) error {
+	for {
+		_, err := w.hub.Heartbeat(ctx, &wire.Checkin{
+			WorkerId: w.ID,
+		})
+		if err != nil {
+			logrus.Error(err)
+		}
+
+		tick := time.NewTicker(15 * time.Second)
+		select {
+		case <-tick.C:
+		case <-ctx.Done():
+			logrus.Info("Stopping heartbeat")
+			return nil
+		}
+	}
+}
+
 func (w *Worker) Run(ctx context.Context) error {
 	if len(w.registeredFullNames) == 0 {
 		return ErrNoRegisteredJobs
 	}
+
+	go w.Heartbeat(ctx)
 
 	for {
 		resp, err := w.hub.Pop(ctx, &wire.PopRequest{

@@ -10,14 +10,17 @@ import (
 )
 
 type Stats interface {
+	// Queues
 	ActiveQueueCount(ctx context.Context) (int64, error)
 	PruneActiveQueues(ctx context.Context) error
 
+	// Jobs
 	ActiveJobCount(ctx context.Context) (int64, error)
-	// ActiveJobs(ctx context.Context) ([]*wire.Job, error)
-	// ActiveQueues(ctx context.Context) ([]string, error)
+	GetJobCount(context.Context, time.Time, Result) (int64, error)
 
-	GetLastHourStats(ctx context.Context, result Result) (map[string]int64, error)
+	// Workers
+	ActiveWorkerCount(ctx context.Context) (int64, error)
+	PruneActiveWorkers(ctx context.Context) error
 }
 
 type Result int
@@ -47,34 +50,38 @@ func (s *redisHandler) ActiveJobCount(ctx context.Context) (int64, error) {
 func (s *redisHandler) ActiveQueueCount(ctx context.Context) (int64, error) {
 	return s.rdb.ZCard(ctx, activeQueuesKey).Result()
 }
-func (s *redisHandler) GetLastHourStats(ctx context.Context, result Result) (map[string]int64, error) {
-	stats := make(map[string]int64)
 
-	// Generate keys for the last 60 minutes
-	currentTime := time.Now()
-	for i := 0; i < 60; i++ {
-		key := fmt.Sprintf("%s:%s", result.String(), currentTime.Add(time.Duration(-i)*time.Minute).Format("2006-01-02_15:04"))
+func (s *redisHandler) ActiveWorkerCount(ctx context.Context) (int64, error) {
+	return s.rdb.ZCard(ctx, activeWorkersKey).Result()
+}
 
-		// Fetch the value from Redis
-		val, err := s.rdb.Get(ctx, key).Int64()
-		if err == redis.Nil {
-			// Key does not exist; skip this minute
-			continue
-		} else if err != nil {
-			return nil, fmt.Errorf("could not get count for key %s: %w", key, err)
-		}
+func (s *redisHandler) GetJobCount(ctx context.Context, t time.Time, result Result) (int64, error) {
+	key := fmt.Sprintf("%s:%s", result.String(), t.Format("2006-01-02_15:04"))
 
-		// Add to stats
-		stats[key] = val
+	val, err := s.rdb.Get(ctx, key).Int64()
+	if err == redis.Nil {
+		// Key does not exist
+		return 0, nil
+	} else if err != nil {
+		return 0, fmt.Errorf("could not get count for key %s: %w", key, err)
 	}
 
-	return stats, nil
+	return val, nil
 }
 
 // PruneActiveQueues will remove queues that haven't pinned a job in the last 30 seconds
 func (s *redisHandler) PruneActiveQueues(ctx context.Context) error {
 	s.log.Debug("Pruning active queues")
 	err := s.rdb.ZRemRangeByScore(ctx, activeQueuesKey, "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
+	if err != nil {
+		return fmt.Errorf("could not prune active queues: %w", err)
+	}
+	return nil
+}
+
+func (s *redisHandler) PruneActiveWorkers(ctx context.Context) error {
+	s.log.Debug("Pruning active workers")
+	err := s.rdb.ZRemRangeByScore(ctx, activeWorkersKey, "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
 	if err != nil {
 		return fmt.Errorf("could not prune active queues: %w", err)
 	}
@@ -94,10 +101,23 @@ func (s *redisHandler) addActiveJob(ctx context.Context, job *wire.Job) error {
 
 	return nil
 }
+
 func (s *redisHandler) queueCheckIn(ctx context.Context, queue string) error {
 	err := s.rdb.ZAdd(ctx, activeQueuesKey, redis.Z{
 		Score:  float64(time.Now().Unix()),
 		Member: queue,
+	}).Err()
+
+	if err != nil {
+		return fmt.Errorf("could not add queue to active queues: %w", err)
+	}
+	return nil
+}
+
+func (s *redisHandler) workerCheckIn(ctx context.Context, workerID string) error {
+	err := s.rdb.ZAdd(ctx, activeWorkersKey, redis.Z{
+		Score:  float64(time.Now().Unix()),
+		Member: workerID,
 	}).Err()
 
 	if err != nil {

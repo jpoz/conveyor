@@ -102,14 +102,19 @@ func main() {
 		}
 	}()
 
-	c := protojob.NewClient("localhost:8080")
-	_, err := c.Enqueue(ctx, &job.MainJob{
-		Spawn:  spawn,
-		Levels: levels,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+	go func() {
+		for {
+			c := protojob.NewClient("localhost:8080")
+			_, err := c.Enqueue(ctx, &job.MainJob{
+				Spawn:  spawn,
+				Levels: levels,
+			})
+			if err != nil {
+				log.Fatal(err)
+			}
+			time.Sleep(30 * time.Second)
+		}
+	}()
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)

@@ -1,4 +1,5 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import  JobsTimeline  from '@/components/jobs-timeline'
 import useSWR from 'swr';
 import { fetcher } from '@/lib/fetcher';
 
@@ -57,6 +58,10 @@ export default function Home() {
             <div className="text-2xl font-bold">{data?.connectedWorkerCount}</div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mt-6">
+        <JobsTimeline />
       </div>
     </div>
   )
