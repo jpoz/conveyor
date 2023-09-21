@@ -118,6 +118,11 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 		parentClosed = true
 	}
 
+	err = s.removeActiveJob(ctx, job, ResultSuccess)
+	if err != nil {
+		return false, fmt.Errorf("could not remove job from active jobs: %w", err)
+	}
+
 	err = s.rdb.Del(ctx, jobKey(job.Uuid)).Err()
 	if err != nil {
 		return false, err

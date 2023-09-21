@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jpoz/protojob/bg"
 	"github.com/jpoz/protojob/fixtures"
 	"github.com/jpoz/protojob/hub"
+	"github.com/jpoz/protojob/libs/go/protojob"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,7 +57,7 @@ func TestBasic(t *testing.T) {
 	}
 
 	go func(t *testing.T) {
-		worker := bg.NewWorker(addr)
+		worker := protojob.NewWorker(addr)
 
 		worker.RegisterJob(func(ctx context.Context, msg *fixtures.Basic) error {
 			data.SetString(msg.Str)
@@ -75,7 +75,7 @@ func TestBasic(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	go func(t *testing.T) {
-		client := bg.NewClient(addr)
+		client := protojob.NewClient(addr)
 
 		result, err := client.Enqueue(ctx, &fixtures.Basic{
 			Str: "test",

@@ -60,12 +60,17 @@ message FailRequest {
   string uuid = 1;
   string message = 2;
 }
-message FailResponse {}
 
+message Checkin {
+  string worker_id = 1;
+}
+
+message Empty {}
 
 service hub {
+  rpc Heartbeat(Checkin) returns (Empty);
   rpc Add(AddRequest) returns (AddResponse);
   rpc Pop(PopRequest) returns (WorkRequest);
   rpc Close(CloseRequest) returns (CloseResponse);
-  rpc Fail(FailRequest) returns (FailResponse);
+  rpc Fail(FailRequest) returns (Empty);
 }

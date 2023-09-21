@@ -49,7 +49,15 @@ docker-clean: ## nuke the docker-compose and volumes
 	docker-compose down -v
 
 .PHONY: hub
-hub: docker ## Run hub
+hub: docker  ## Run hub
+	$(GOCMD) run cmd/hub/main.go -c dev_config.yml
+
+.PHONY: dev_hub
+dev_hub: docker ## Run hub (rebuilt with reflex)
+	reflex -r '\.(go|html)$$' -s make hub
+
+.PHONY: hub_ui
+hub_ui: docker ui_build ## Run hub (rebuild ui first)
 	$(GOCMD) run cmd/hub/main.go -c dev_config.yml
 
 .PHONY: debug_hub
@@ -58,7 +66,7 @@ debug_hub: docker ## Run hub
 
 .PHONY: ui
 ui: ## Run UI
-	cd ui && VITE_API_URL=http://localhost:8080 npm run dev
+	cd ui && VITE_API_URL=http://localhost:8081/api npm run dev
 
 .PHONY: ui_install
 ui_install: ## Install UI
@@ -66,8 +74,7 @@ ui_install: ## Install UI
 
 .PHONY: ui_build
 ui_build: ## Build UI
-	cd ui && npm run build
-
+	cd ui && VITE_BASE_URL=/api npm run build
 
 ## Gen
 .PHONY: gen
@@ -105,6 +112,10 @@ cover: test ## Generate coverage report
 .PHONY: integration
 integration: ## Run tests + integration
 	./run-tests.sh
+
+.PHONY: build
+build: ui_build  ## Build hub cmd
+	$(GOCMD) build -o protojob cmd/hub/main.go
 
 ## Help:
 .PHONY: help
