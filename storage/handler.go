@@ -13,4 +13,6 @@ type Handler interface {
 	CloseJob(ctx context.Context, job *wire.Job) (bool, error)
 
 	FailJob(ctx context.Context, uuid string) error
+
+	Stats
 }

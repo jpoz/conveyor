@@ -12,6 +12,16 @@ import (
 
 func (s *redisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, error) {
 	s.log.Debugf("Popping jobs from queues: %#v", queues)
+
+	go func() {
+		for _, queue := range queues {
+			err := s.queueCheckIn(ctx, queue)
+			if err != nil {
+				s.log.Errorf("failed to check in to queue %s: %v", queue, err)
+			}
+		}
+	}()
+
 	payload, err := s.rdb.BRPop(ctx, 2*time.Second, queues...).Result()
 	if err == redis.Nil {
 		return nil, nil

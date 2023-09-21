@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -151,8 +152,9 @@ func (s *Server) Listen(ctx context.Context) error {
 	wire.RegisterHubServer(grpcServer, s)
 
 	uiCfg := ui.ServerConfig{
-		Addr: s.config.UiAddr,
-		Log:  s.log,
+		Addr:    s.config.UiAddr,
+		Log:     s.log,
+		Storage: s.storage,
 	}
 	uiServer := ui.NewServer(uiCfg)
 
@@ -171,6 +173,8 @@ func (s *Server) Listen(ctx context.Context) error {
 		<-ctx.Done()
 		grpcServer.GracefulStop()
 	}()
+
+	go s.Periodic(ctx, 30*time.Second, s.storage.PruneActiveQueues)
 
 	select {
 	case err := <-errCh:

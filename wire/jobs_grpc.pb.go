@@ -19,16 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Hub_Add_FullMethodName   = "/wire.hub/Add"
-	Hub_Pop_FullMethodName   = "/wire.hub/Pop"
-	Hub_Close_FullMethodName = "/wire.hub/Close"
-	Hub_Fail_FullMethodName  = "/wire.hub/Fail"
+	Hub_Heartbeat_FullMethodName = "/wire.hub/Heartbeat"
+	Hub_Add_FullMethodName       = "/wire.hub/Add"
+	Hub_Pop_FullMethodName       = "/wire.hub/Pop"
+	Hub_Close_FullMethodName     = "/wire.hub/Close"
+	Hub_Fail_FullMethodName      = "/wire.hub/Fail"
 )
 
 // HubClient is the client API for Hub service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type HubClient interface {
+	Heartbeat(ctx context.Context, in *Ping, opts ...grpc.CallOption) (*Pong, error)
 	Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddResponse, error)
 	Pop(ctx context.Context, in *PopRequest, opts ...grpc.CallOption) (*WorkRequest, error)
 	Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error)
@@ -41,6 +43,15 @@ type hubClient struct {
 
 func NewHubClient(cc grpc.ClientConnInterface) HubClient {
 	return &hubClient{cc}
+}
+
+func (c *hubClient) Heartbeat(ctx context.Context, in *Ping, opts ...grpc.CallOption) (*Pong, error) {
+	out := new(Pong)
+	err := c.cc.Invoke(ctx, Hub_Heartbeat_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *hubClient) Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddResponse, error) {
@@ -83,6 +94,7 @@ func (c *hubClient) Fail(ctx context.Context, in *FailRequest, opts ...grpc.Call
 // All implementations must embed UnimplementedHubServer
 // for forward compatibility
 type HubServer interface {
+	Heartbeat(context.Context, *Ping) (*Pong, error)
 	Add(context.Context, *AddRequest) (*AddResponse, error)
 	Pop(context.Context, *PopRequest) (*WorkRequest, error)
 	Close(context.Context, *CloseRequest) (*CloseResponse, error)
@@ -94,6 +106,9 @@ type HubServer interface {
 type UnimplementedHubServer struct {
 }
 
+func (UnimplementedHubServer) Heartbeat(context.Context, *Ping) (*Pong, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
+}
 func (UnimplementedHubServer) Add(context.Context, *AddRequest) (*AddResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Add not implemented")
 }
@@ -117,6 +132,24 @@ type UnsafeHubServer interface {
 
 func RegisterHubServer(s grpc.ServiceRegistrar, srv HubServer) {
 	s.RegisterService(&Hub_ServiceDesc, srv)
+}
+
+func _Hub_Heartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Ping)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HubServer).Heartbeat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Hub_Heartbeat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HubServer).Heartbeat(ctx, req.(*Ping))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Hub_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -198,6 +231,10 @@ var Hub_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "wire.hub",
 	HandlerType: (*HubServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Heartbeat",
+			Handler:    _Hub_Heartbeat_Handler,
+		},
 		{
 			MethodName: "Add",
 			Handler:    _Hub_Add_Handler,

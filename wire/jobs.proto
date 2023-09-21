@@ -62,8 +62,11 @@ message FailRequest {
 }
 message FailResponse {}
 
+message Ping {}
+message Pong {}
 
 service hub {
+  rpc Heartbeat(Ping) returns (Pong);
   rpc Add(AddRequest) returns (AddResponse);
   rpc Pop(PopRequest) returns (WorkRequest);
   rpc Close(CloseRequest) returns (CloseResponse);
