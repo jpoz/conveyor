@@ -26,12 +26,6 @@ func (s *redisHandler) FailJob(ctx context.Context, uuid string) error {
 		maxRetries = job.MaxRetries
 	}
 
-	if job.Retry >= maxRetries {
-		// already failed
-		// TODO send to failed queue
-		return nil
-	}
-
 	retryAt := time.Now().Add(RetryIn(job))
 	job.Retry++
 
@@ -44,16 +38,33 @@ func (s *redisHandler) FailJob(ctx context.Context, uuid string) error {
 
 	pipe.Del(ctx, jobKey(uuid))
 	pipe.Del(ctx, onCompleteListKey(uuid))
-	pipe.ZAdd(ctx, failedJobsKey, redis.Z{Score: float64(retryAt.Unix()), Member: jobBytes})
+	pipe.Del(ctx, childenListKey(uuid))
+	pipe.SRem(ctx, activeJobsKey, uuid)
+
+	var result Result
+	if job.Retry >= maxRetries {
+		result = ResultFailure
+		pipe.LPush(ctx, failedJobsKey, jobBytes)
+	} else {
+		result = ResultError
+		pipe.ZAdd(ctx, scheduledJobsKey, redis.Z{Score: float64(retryAt.Unix()), Member: jobBytes})
+	}
 
 	cmdErrs, err := pipe.Exec(ctx)
 	if err != nil {
+		s.log.Errorf("could not fail job: %s", err)
 		return err
 	}
 	for _, err := range cmdErrs {
-		if err != nil {
+		if err != nil && err.Err() != nil {
+			s.log.Errorf("could not fail job cmd error: %s(%v) %s", err.Name(), err.Args(), err)
 			return err.Err()
 		}
+	}
+
+	err = s.incrResult(ctx, result)
+	if err != nil {
+		s.log.Errorf("could not increment result: %s", err)
 	}
 
 	return nil

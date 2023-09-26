@@ -29,7 +29,7 @@ func main() {
 	}
 
 	go func() {
-		err = server.Listen(ctx)
+		err = server.Run(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}

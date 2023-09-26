@@ -3,9 +3,11 @@ package storage
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jpoz/protojob/wire"
+	"github.com/redis/go-redis/v9"
 )
 
 func (s *redisHandler) AddJob(ctx context.Context, job *wire.Job) error {
@@ -41,7 +43,16 @@ func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) 
 		}
 		return nil
 	} else if job.RunAt != nil {
-		panic("RunAt is not supported")
+		if job.RunAt.AsTime().After(time.Now()) {
+			return s.rdb.ZAdd(
+				ctx,
+				scheduledJobsKey,
+				redis.Z{
+					Score:  float64(job.RunAt.AsTime().Unix()),
+					Member: jobBytes,
+				},
+			).Err()
+		}
 	}
 
 	if job.ParentUuid != "" {

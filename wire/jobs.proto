@@ -26,13 +26,7 @@ message Job {
 }
 
 message AddRequest {
-  string type = 1;
-  bytes payload = 2;
-  string queue = 3;
-
-  // optional
-  string parent_uuid = 4;
-  string predecessor_uuid = 5;
+  Job job = 1;
 }
 
 message AddResponse {

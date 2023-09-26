@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+protojob
 
 # Test binary, built with `go test -c`
 *.test

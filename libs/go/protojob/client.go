@@ -52,9 +52,11 @@ func (c *HubClient) Enqueue(ctx context.Context, msg proto.Message) (*Result, er
 	msgName := proto.MessageName(msg)
 
 	req := &wire.AddRequest{
-		Type:    string(msgName),
-		Queue:   string(msgName),
-		Payload: payload,
+		Job: &wire.Job{
+			Type:    string(msgName),
+			Queue:   string(msgName),
+			Payload: payload,
+		},
 	}
 
 	return c.add(ctx, req)
@@ -70,10 +72,12 @@ func (c *HubClient) EnqueueChild(ctx context.Context, msg proto.Message) (*Resul
 	msgName := proto.MessageName(msg)
 
 	req := &wire.AddRequest{
-		Type:       string(msgName),
-		Queue:      string(msgName),
-		Payload:    payload,
-		ParentUuid: parent.Uuid,
+		Job: &wire.Job{
+			Type:       string(msgName),
+			Queue:      string(msgName),
+			Payload:    payload,
+			ParentUuid: parent.Uuid,
+		},
 	}
 
 	return c.add(ctx, req)
@@ -89,10 +93,12 @@ func (c *HubClient) EnqueueHeir(ctx context.Context, msg proto.Message) (*Result
 	msgName := proto.MessageName(msg)
 
 	req := &wire.AddRequest{
-		Type:            string(msgName),
-		Queue:           string(msgName),
-		Payload:         payload,
-		PredecessorUuid: predecessor.Uuid,
+		Job: &wire.Job{
+			Type:            string(msgName),
+			Queue:           string(msgName),
+			Payload:         payload,
+			PredecessorUuid: predecessor.Uuid,
+		},
 	}
 
 	return c.add(ctx, req)
