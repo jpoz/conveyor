@@ -30,9 +30,11 @@ func TestEnqueue(t *testing.T) {
 		Add(
 			gomock.Eq(ctx),
 			gomock.Eq(&wire.AddRequest{
-				Type:    "fixtures.Basic",
-				Queue:   "fixtures.Basic",
-				Payload: []byte("\n\x03foo\x10{"),
+				Job: &wire.Job{
+					Type:    "fixtures.Basic",
+					Queue:   "fixtures.Basic",
+					Payload: []byte("\n\x03foo\x10{"),
+				},
 			}),
 		).
 		Return(&wire.AddResponse{

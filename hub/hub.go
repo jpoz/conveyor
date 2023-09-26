@@ -19,6 +19,10 @@ import (
 	"github.com/jpoz/protojob/wire"
 )
 
+const (
+	DefaultMaxRetries = 5
+)
+
 type Config struct {
 	Addr     string `yaml:"addr"`
 	UiAddr   string `yaml:"uiAddr"`
@@ -82,15 +86,13 @@ func NewServer(args ServerArgs, cfg Config) (*Server, error) {
 	return srv, nil
 }
 
-func (s *Server) Add(ctx context.Context, newJob *wire.AddRequest) (*wire.AddResponse, error) {
+func (s *Server) Add(ctx context.Context, req *wire.AddRequest) (*wire.AddResponse, error) {
+	job := req.Job
 	jid := uuid.New()
-	job := &wire.Job{
-		Uuid:            jid.String(),
-		Type:            newJob.Type,
-		Queue:           newJob.Queue,
-		Payload:         newJob.Payload,
-		PredecessorUuid: newJob.PredecessorUuid,
-		ParentUuid:      newJob.ParentUuid,
+	job.Uuid = jid.String()
+
+	if job.MaxRetries == 0 {
+		job.MaxRetries = DefaultMaxRetries
 	}
 
 	entry := s.log.WithFields(logrus.Fields{"job": job.Type, "uuid": job.Uuid, "queue": job.Queue})
@@ -153,7 +155,7 @@ func (s *Server) Heartbeat(ctx context.Context, checkin *wire.Checkin) (*wire.Em
 	return &wire.Empty{}, nil
 }
 
-func (s *Server) Listen(ctx context.Context) error {
+func (s *Server) Run(ctx context.Context) error {
 	lis, err := net.Listen("tcp", s.config.Addr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -172,6 +174,10 @@ func (s *Server) Listen(ctx context.Context) error {
 
 	errCh := make(chan error, 1)
 
+	go s.Periodic(ctx, 30*time.Second, s.storage.PruneActiveQueues)
+	go s.Periodic(ctx, 30*time.Second, s.storage.PruneActiveWorkers)
+	go s.Periodic(ctx, 1*time.Second, s.storage.PopScheduledJobs)
+
 	go func() {
 		s.log.Printf("wire listening at %v", lis.Addr())
 		errCh <- grpcServer.Serve(lis)
@@ -185,9 +191,6 @@ func (s *Server) Listen(ctx context.Context) error {
 		<-ctx.Done()
 		grpcServer.GracefulStop()
 	}()
-
-	go s.Periodic(ctx, 30*time.Second, s.storage.PruneActiveQueues)
-	go s.Periodic(ctx, 30*time.Second, s.storage.PruneActiveWorkers)
 
 	select {
 	case err := <-errCh:

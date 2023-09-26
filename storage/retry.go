@@ -7,5 +7,5 @@ import (
 )
 
 func RetryIn(job *wire.Job) time.Duration {
-	return 60 * time.Second
+	return 2 * time.Second
 }

@@ -27,9 +27,11 @@ func TestSubmitNewJob(t *testing.T) {
 	assert.NoError(t, err)
 
 	resp, err := hub.Add(ctx, &wire.AddRequest{
-		Type:    "foo.Bar",
-		Queue:   "foo.Bar",
-		Payload: []byte("bar"), // not a valid protobuf
+		Job: &wire.Job{
+			Type:    "foo.Bar",
+			Queue:   "foo.Bar",
+			Payload: []byte("bar"), // not a valid protobuf
+		},
 	})
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp.Job.Uuid)
@@ -71,10 +73,12 @@ func TestSubmitNewJob_withParent(t *testing.T) {
 	assert.NoError(t, err)
 
 	resp, err := hub.Add(ctx, &wire.AddRequest{
-		Type:       "foo.Bar",
-		Queue:      "foo.Bar",
-		Payload:    []byte("bar"), // not a valid protobuf
-		ParentUuid: "1234-5678-9012-3456",
+		Job: &wire.Job{
+			Type:       "foo.Bar",
+			Queue:      "foo.Bar",
+			Payload:    []byte("bar"), // not a valid protobuf
+			ParentUuid: "1234-5678-9012-3456",
+		},
 	})
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp.Job.Uuid)
