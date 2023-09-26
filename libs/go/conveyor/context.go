@@ -1,10 +1,10 @@
-package protojob
+package conveyor
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/jpoz/protojob/wire"
+	"github.com/jpoz/conveyor/wire"
 )
 
 type ContextKey struct{ Name string }

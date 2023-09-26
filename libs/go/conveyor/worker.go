@@ -1,4 +1,4 @@
-package protojob
+package conveyor
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jpoz/protojob/wire"
+	"github.com/jpoz/conveyor/wire"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

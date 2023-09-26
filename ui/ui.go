@@ -13,8 +13,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/jpoz/protojob/api"
-	"github.com/jpoz/protojob/storage"
+	"github.com/jpoz/conveyor/api"
+	"github.com/jpoz/conveyor/storage"
 	"github.com/sirupsen/logrus"
 )
 

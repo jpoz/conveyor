@@ -1,4 +1,4 @@
-module github.com/jpoz/protojob
+module github.com/jpoz/conveyor
 
 go 1.20
 

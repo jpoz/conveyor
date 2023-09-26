@@ -1,7 +1,7 @@
 syntax = "proto3";
 package tasks;
 
-option go_package = "github.com/jpoz/protojob/examples/python/tasks";
+option go_package = "github.com/jpoz/conveyor/examples/python/tasks";
 
 message MainTask {
   int32 num = 1;

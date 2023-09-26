@@ -1,9 +1,9 @@
-import protojob
+import conveyor
 from tasks import MainTask
 
 def mainTask(msg: MainTask):
     print('hello')
 
-with protojob.worker() as w:
+with conveyor.worker() as w:
     w.register(mainTask)
     w.run()

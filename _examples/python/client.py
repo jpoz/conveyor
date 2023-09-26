@@ -1,6 +1,6 @@
-import protojob
+import conveyor
 from tasks import MainTask
 
-with protojob.client() as c:
+with conveyor.client() as c:
     task = MainTask(num=5)
     c.enqueue(task)

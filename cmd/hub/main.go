@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/jpoz/protojob/hub"
+	"github.com/jpoz/conveyor/hub"
 )
 
 func main() {

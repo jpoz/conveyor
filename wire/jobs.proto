@@ -3,7 +3,7 @@ package wire;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/jpoz/protojob/wire";
+option go_package = "github.com/jpoz/conveyor/wire";
 
 // Job data structure
 message Job {

@@ -1,7 +1,7 @@
 syntax = "proto3";
 package job;
 
-option go_package = "github.com/jpoz/protojob/examples/chain/job";
+option go_package = "github.com/jpoz/conveyor/examples/chain/job";
 
 message MainJob {
   int32 spawn = 1;
