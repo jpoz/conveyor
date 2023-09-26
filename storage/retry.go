@@ -3,7 +3,7 @@ package storage
 import (
 	"time"
 
-	"github.com/jpoz/protojob/wire"
+	"github.com/jpoz/conveyor/wire"
 )
 
 func RetryIn(job *wire.Job) time.Duration {

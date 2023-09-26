@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 
-	"github.com/jpoz/protojob/storage"
-	"github.com/jpoz/protojob/ui"
-	"github.com/jpoz/protojob/wire"
+	"github.com/jpoz/conveyor/storage"
+	"github.com/jpoz/conveyor/ui"
+	"github.com/jpoz/conveyor/wire"
 )
 
 const (

@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/jpoz/protojob/_examples/helloworld/hello"
-	"github.com/jpoz/protojob/libs/go/protojob"
+	"github.com/jpoz/conveyor/_examples/helloworld/hello"
+	"github.com/jpoz/conveyor/libs/go/conveyor"
 )
 
 func helloJob(ctx context.Context, msg *hello.HelloJob) error {
-	job := protojob.Job(ctx)
+	job := conveyor.Job(ctx)
 
 	fmt.Printf("%s %s %s\n", job.Uuid, msg.Greeting, msg.Name)
 	return nil
 }
 
 func main() {
-	w := protojob.NewWorker("localhost:8080")
+	w := conveyor.NewWorker("localhost:8080")
 
 	err := w.RegisterJob(helloJob)
 	if err != nil {

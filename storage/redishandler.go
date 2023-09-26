@@ -3,7 +3,7 @@ package storage
 import (
 	context "context"
 
-	"github.com/jpoz/protojob/wire"
+	"github.com/jpoz/conveyor/wire"
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"

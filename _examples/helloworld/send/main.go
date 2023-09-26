@@ -4,12 +4,12 @@ import (
 	"context"
 	"log"
 
-	"github.com/jpoz/protojob/_examples/helloworld/hello"
-	"github.com/jpoz/protojob/libs/go/protojob"
+	"github.com/jpoz/conveyor/_examples/helloworld/hello" // protobuf types
+	"github.com/jpoz/conveyor/libs/go/conveyor"
 )
 
 func main() {
-	client := protojob.NewClient("localhost:8080")
+	client := conveyor.NewClient("localhost:8080")
 
 	response, err := client.Enqueue(context.Background(), &hello.HelloJob{
 		Name:     "World",

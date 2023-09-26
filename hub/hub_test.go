@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/jpoz/protojob/hub"
-	"github.com/jpoz/protojob/wire"
+	"github.com/jpoz/conveyor/hub"
+	"github.com/jpoz/conveyor/wire"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"

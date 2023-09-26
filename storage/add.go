@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jpoz/protojob/wire"
+	"github.com/jpoz/conveyor/wire"
 	"github.com/redis/go-redis/v9"
 )
 

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jpoz/protojob/storage"
+	"github.com/jpoz/conveyor/storage"
 	"github.com/sirupsen/logrus"
 )
 

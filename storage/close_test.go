@@ -4,8 +4,8 @@ import (
 	context "context"
 	"testing"
 
-	"github.com/jpoz/protojob/storage"
-	"github.com/jpoz/protojob/wire"
+	"github.com/jpoz/conveyor/storage"
+	"github.com/jpoz/conveyor/wire"
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"

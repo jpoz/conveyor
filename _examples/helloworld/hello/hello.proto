@@ -1,7 +1,7 @@
 syntax = "proto3";
 package helloworld;
 
-option go_package = "github.com/jpoz/protojob/examples/helloworld/hello";
+option go_package = "github.com/jpoz/conveyor/examples/helloworld/hello";
 
 message HelloJob {
   string name = 1;

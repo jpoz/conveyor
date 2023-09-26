@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/jpoz/protojob/wire"
+	"github.com/jpoz/conveyor/wire"
 )
 
 type Handler interface {

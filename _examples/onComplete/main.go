@@ -9,15 +9,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jpoz/protojob/_examples/onComplete/tasks"
-	"github.com/jpoz/protojob/bg"
+	"github.com/jpoz/conveyor/_examples/onComplete/tasks"
+	"github.com/jpoz/conveyor/libs/go/conveyor"
 )
 
 var spawn int32 = 1
 
 func mainTask(ctx context.Context, msg *tasks.MainTask) error {
-	j := bg.Job(ctx)
-	client := bg.Client(ctx)
+	j := conveyor.Job(ctx)
+	client := conveyor.Client(ctx)
 
 	_, err := client.EnqueueHeir(ctx, &tasks.OnCompleteTask{Num: -1})
 	if err != nil {
@@ -36,7 +36,7 @@ func mainTask(ctx context.Context, msg *tasks.MainTask) error {
 }
 
 func childTask(ctx context.Context, msg *tasks.ChildTask) error {
-	j := bg.Job(ctx)
+	j := conveyor.Job(ctx)
 
 	fmt.Printf("[%s] Running Child\n", j.Uuid)
 	time.Sleep(10 * time.Millisecond)
@@ -45,7 +45,7 @@ func childTask(ctx context.Context, msg *tasks.ChildTask) error {
 }
 
 func onComplete(ctx context.Context, msg *tasks.OnCompleteTask) error {
-	j := bg.Job(ctx)
+	j := conveyor.Job(ctx)
 
 	fmt.Printf("[%s] Done!\n", j.Uuid)
 
@@ -56,7 +56,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
-		w := bg.NewWorker("localhost:8080")
+		w := conveyor.NewWorker("localhost:8080")
 
 		err := w.RegisterJobs(mainTask, childTask, onComplete)
 		if err != nil {
@@ -65,7 +65,7 @@ func main() {
 		w.Run(ctx)
 	}()
 
-	c := bg.NewClient("localhost:8080")
+	c := conveyor.NewClient("localhost:8080")
 	_, err := c.Enqueue(ctx, &tasks.MainTask{Num: 1})
 	if err != nil {
 		log.Fatal(err)

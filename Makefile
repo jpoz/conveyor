@@ -7,7 +7,7 @@ GOVET=$(GOCMD) vet
 SERVICE_PORT?=9000
 
 PROTO_FILES:=$(shell find . -type f -name "*.proto" -print)
-GO_PKGS:=$(shell go list ./... | grep -v github.com/jpoz/protojob/examples/ | grep -v github.com/jpoz/protojob/fixtures/ | grep -v github.com/jpoz/protojob/integration/)
+GO_PKGS:=$(shell go list ./... | grep -v github.com/jpoz/conveyor/examples/ | grep -v github.com/jpoz/conveyor/fixtures/ | grep -v github.com/jpoz/conveyor/integration/)
 
 GREEN  := $(shell tput -Txterm setaf 2)
 YELLOW := $(shell tput -Txterm setaf 3)
@@ -93,11 +93,11 @@ gen_go_protos:
 			${PROTO_FILES}
 
 gen_python_protos:
-	python -m grpc_tools.protoc -I wire --python_out=./libs/py/protojob/wire --grpc_python_out=./libs/py/protojob/wire wire/jobs.proto
+	python -m grpc_tools.protoc -I wire --python_out=./libs/py/conveyor/wire --grpc_python_out=./libs/py/conveyor/wire wire/jobs.proto
 	protol \
 		--create-package \
 		--in-place \
-		--python-out ./libs/py/protojob/wire \
+		--python-out ./libs/py/conveyor/wire \
 		protoc --proto-path=./wire wire/jobs.proto
 
 ## Test
@@ -115,7 +115,7 @@ integration: ## Run tests + integration
 
 .PHONY: build
 build: ui_build  ## Build hub cmd
-	$(GOCMD) build -o protojob cmd/hub/main.go
+	$(GOCMD) build -o conveyor cmd/hub/main.go
 
 ## Help:
 .PHONY: help
