@@ -9,7 +9,7 @@ echo "Waiting for Redis..."
 sleep 3
 
 # Run integration tests
-go test ./... -tags=integration
+gotestsum -f testname ./... -tags=integration
 
 # Stop Redis container
 docker-compose -f test-docker-compose.yml down

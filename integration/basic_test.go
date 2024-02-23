@@ -43,7 +43,7 @@ func TestBasic(t *testing.T) {
 		}
 
 		close(errs)
-		err = server.Listen(ctx)
+		err = server.Run(ctx)
 		if err != nil {
 			fmt.Println(err)
 		}

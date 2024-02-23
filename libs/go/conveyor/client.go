@@ -3,47 +3,32 @@ package conveyor
 import (
 	"context"
 
+	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
 	"github.com/jpoz/conveyor/wire"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 )
 
-type HubClient struct {
-	Hub  wire.HubClient
-	conn *grpc.ClientConn
-	log  *logrus.Entry
+type Client struct {
+	handler storage.Handler
+	log     *logrus.Entry
 }
 
 type Result struct {
 	Uuid string
 }
 
-func NewClient(hubAddr string) *HubClient {
-	var opts []grpc.DialOption
-
-	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	conn, err := grpc.Dial(hubAddr, opts...)
-	if err != nil {
-		panic(err)
-	}
-
-	return &HubClient{
-		Hub:  wire.NewHubClient(conn),
-		conn: conn,
-		log:  logrus.WithField("client", "hub"),
+func NewClient(redisAddr string) *Client {
+	return &Client{
+		log: logrus.WithField("client", "hub"),
 	}
 }
 
-func (c *HubClient) Close() error {
-	if c.conn == nil {
-		return nil
-	}
-	return c.conn.Close()
+func (c *Client) Close() error {
+	return c.handler.Close()
 }
 
-func (c *HubClient) Enqueue(ctx context.Context, msg proto.Message) (*Result, error) {
+func (c *Client) Enqueue(ctx context.Context, msg proto.Message) (*Result, error) {
 	payload, err := proto.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -51,19 +36,17 @@ func (c *HubClient) Enqueue(ctx context.Context, msg proto.Message) (*Result, er
 
 	msgName := proto.MessageName(msg)
 
-	req := &wire.AddRequest{
-		Job: &wire.Job{
-			Type:    string(msgName),
-			Queue:   string(msgName),
-			Payload: payload,
-		},
+	job := &wire.Job{
+		Type:    string(msgName),
+		Queue:   string(msgName),
+		Payload: payload,
 	}
 
-	return c.add(ctx, req)
+	return c.add(ctx, job)
 }
 
-func (c *HubClient) EnqueueChild(ctx context.Context, msg proto.Message) (*Result, error) {
-	parent := Job(ctx)
+func (c *Client) EnqueueChild(ctx context.Context, msg proto.Message) (*Result, error) {
+	parent := CurrentJob(ctx)
 	payload, err := proto.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -71,20 +54,18 @@ func (c *HubClient) EnqueueChild(ctx context.Context, msg proto.Message) (*Resul
 
 	msgName := proto.MessageName(msg)
 
-	req := &wire.AddRequest{
-		Job: &wire.Job{
-			Type:       string(msgName),
-			Queue:      string(msgName),
-			Payload:    payload,
-			ParentUuid: parent.Uuid,
-		},
+	job := &wire.Job{
+		Type:       string(msgName),
+		Queue:      string(msgName),
+		Payload:    payload,
+		ParentUuid: parent.Uuid,
 	}
 
-	return c.add(ctx, req)
+	return c.add(ctx, job)
 }
 
-func (c *HubClient) EnqueueHeir(ctx context.Context, msg proto.Message) (*Result, error) {
-	predecessor := Job(ctx)
+func (c *Client) EnqueueHeir(ctx context.Context, msg proto.Message) (*Result, error) {
+	predecessor := CurrentJob(ctx)
 	payload, err := proto.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -92,27 +73,21 @@ func (c *HubClient) EnqueueHeir(ctx context.Context, msg proto.Message) (*Result
 
 	msgName := proto.MessageName(msg)
 
-	req := &wire.AddRequest{
-		Job: &wire.Job{
-			Type:            string(msgName),
-			Queue:           string(msgName),
-			Payload:         payload,
-			PredecessorUuid: predecessor.Uuid,
-		},
+	job := &wire.Job{
+		Type:            string(msgName),
+		Queue:           string(msgName),
+		Payload:         payload,
+		PredecessorUuid: predecessor.Uuid,
 	}
 
-	return c.add(ctx, req)
+	return c.add(ctx, job)
 }
 
-func (c *HubClient) add(ctx context.Context, request *wire.AddRequest) (*Result, error) {
-	resp, err := c.Hub.Add(ctx, request)
+func (c *Client) add(ctx context.Context, job *wire.Job) (*Result, error) {
+	err := c.handler.AddJob(ctx, job)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp != nil {
-		return &Result{Uuid: resp.Job.Uuid}, nil
-	}
-
-	return nil, nil
+	return &Result{Uuid: job.Uuid}, nil
 }

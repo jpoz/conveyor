@@ -32,6 +32,10 @@ func (s *redisHandler) setJob(ctx context.Context, uuid string, jobBytes []byte)
 	return nil
 }
 
+func (s *redisHandler) Close() error {
+	return s.rdb.Close()
+}
+
 func marshalJob(job *wire.Job) ([]byte, error) {
 	if job == nil {
 		return nil, ErrNoJob
