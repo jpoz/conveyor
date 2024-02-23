@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
 	"github.com/jpoz/conveyor/wire"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -28,32 +28,28 @@ type registeredJob struct {
 }
 
 type Worker struct {
-	ID     string
-	Client *HubClient
-	hub    wire.HubClient
-	conn   *grpc.ClientConn
+	ID string
+
+	handler storage.Handler
+	log     *logrus.Entry
+	client  *Client
 
 	fnMap               map[string]registeredJob
 	registeredFullNames []string
 }
 
-func NewWorker(hubAddr string) *Worker {
-	var opts []grpc.DialOption
+func NewWorker(redisAddr string) *Worker {
+	rds := redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+	})
 
-	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	conn, err := grpc.Dial(hubAddr, opts...)
-	if err != nil {
-		panic(err)
-	}
+	handler := storage.NewRedisHandler(logrus.New(), rds)
+	client := NewClient(redisAddr)
 
 	return &Worker{
-		ID: uuid.New().String(),
-		Client: &HubClient{
-			Hub:  wire.NewHubClient(conn),
-			conn: conn,
-		},
-		hub:                 wire.NewHubClient(conn),
-		conn:                conn,
+		ID:                  uuid.New().String(),
+		handler:             handler,
+		client:              client,
 		fnMap:               make(map[string]registeredJob),
 		registeredFullNames: make([]string, 0),
 	}
@@ -119,7 +115,7 @@ func (w *Worker) ContextFor(job *wire.Job) context.Context {
 	ctx := context.Background()
 
 	ctx = JobContext(ctx, job)
-	ctx = ClientContext(ctx, w.Client)
+	ctx = AddClientToContext(ctx, w.client)
 
 	return ctx
 }
@@ -127,16 +123,14 @@ func (w *Worker) ContextFor(job *wire.Job) context.Context {
 func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
 	err := w.callJob(job)
 	if err != nil {
-		_, ierr := w.hub.Fail(ctx, &wire.FailRequest{
-			Uuid: job.Uuid,
-		})
+		ierr := w.handler.FailJob(ctx, job.Uuid)
 		if ierr != nil {
 			return fmt.Errorf("failed to fail job %s: %w", job.Uuid, ierr)
 		}
 		return fmt.Errorf("job %s failed: %w", job.Uuid, err)
 	}
 
-	_, err = w.hub.Close(ctx, &wire.CloseRequest{Job: job})
+	_, err = w.handler.CloseJob(ctx, job)
 	if err != nil {
 		return fmt.Errorf("failed to close job %s: %w", job.Uuid, err)
 	}
@@ -183,9 +177,7 @@ func (w *Worker) callJob(job *wire.Job) error {
 
 func (w *Worker) Heartbeat(ctx context.Context) error {
 	for {
-		_, err := w.hub.Heartbeat(ctx, &wire.Checkin{
-			WorkerId: w.ID,
-		})
+		err := w.handler.Ping(ctx)
 		if err != nil {
 			logrus.Error(err)
 		}
@@ -208,15 +200,13 @@ func (w *Worker) Run(ctx context.Context) error {
 	go w.Heartbeat(ctx)
 
 	for {
-		resp, err := w.hub.Pop(ctx, &wire.PopRequest{
-			Queues: w.registeredFullNames,
-		})
+		job, err := w.handler.Pop(ctx, w.registeredFullNames...)
 		if err != nil {
 			logrus.Error(err)
 			return err
 		}
 
-		if resp.Job == nil {
+		if job == nil {
 			select {
 			case <-ctx.Done():
 				return nil
@@ -225,7 +215,7 @@ func (w *Worker) Run(ctx context.Context) error {
 			continue
 		}
 
-		err = w.CallJob(ctx, resp.Job)
+		err = w.CallJob(ctx, job)
 		if err != nil {
 			logrus.Error(err)
 		}
@@ -233,5 +223,5 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 
 func (w *Worker) Close() error {
-	return w.conn.Close()
+	return w.handler.Close()
 }

@@ -5,13 +5,13 @@ import (
 
 	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
 	"github.com/jpoz/conveyor/wire"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
 type Client struct {
 	handler storage.Handler
-	log     *logrus.Entry
 }
 
 type Result struct {
@@ -19,8 +19,11 @@ type Result struct {
 }
 
 func NewClient(redisAddr string) *Client {
+	rds := redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+	})
 	return &Client{
-		log: logrus.WithField("client", "hub"),
+		handler: storage.NewRedisHandler(logrus.New(), rds),
 	}
 }
 

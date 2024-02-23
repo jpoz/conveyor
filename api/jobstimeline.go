@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/go-chi/render"
-	"github.com/jpoz/conveyor/storage"
+	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
 )
 
 type JobStat struct {

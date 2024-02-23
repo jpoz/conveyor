@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 
-	"github.com/jpoz/conveyor/storage"
+	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
 	"github.com/jpoz/conveyor/ui"
 	"github.com/jpoz/conveyor/wire"
 )

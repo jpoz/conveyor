@@ -14,7 +14,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/jpoz/conveyor/api"
-	"github.com/jpoz/conveyor/storage"
+	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
 	"github.com/sirupsen/logrus"
 )
 

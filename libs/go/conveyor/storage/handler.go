@@ -18,6 +18,7 @@ type Handler interface {
 
 	FailJob(ctx context.Context, uuid string) error
 
+	Ping(ctx context.Context) error
 	Close() error
 
 	Stats

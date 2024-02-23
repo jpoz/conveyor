@@ -2,7 +2,7 @@
 
 CGO_ENABLED?=0
 GOCMD=CGO_ENABLED=$(CGO_ENABLED) go
-GOTEST=$(GOCMD) test
+GOTEST=gotestsum -f testname
 GOVET=$(GOCMD) vet
 SERVICE_PORT?=9000
 
@@ -103,7 +103,7 @@ gen_python_protos:
 ## Test
 .PHONY: test
 test: ## Run tests
-	$(GOTEST) -run 'Test*' -cover -coverprofile=coverage.out -race ${GO_PKGS}
+	$(GOTEST) -- -race ${GO_PKGS}
 
 .PHONY: cover
 cover: test ## Generate coverage report
