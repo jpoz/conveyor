@@ -9,7 +9,10 @@ import (
 )
 
 func main() {
-	client := conveyor.NewClient("localhost:8080")
+	client, err := conveyor.NewClient("redis://localhost:6379")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	response, err := client.Enqueue(context.Background(), &hello.HelloJob{
 		Name:     "World",

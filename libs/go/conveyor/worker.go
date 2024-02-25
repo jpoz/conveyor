@@ -38,13 +38,23 @@ type Worker struct {
 	registeredFullNames []string
 }
 
-func NewWorker(redisAddr string) *Worker {
-	rds := redis.NewClient(&redis.Options{
-		Addr: redisAddr,
-	})
+func NewWorker(redisAddr string) (*Worker, error) {
+	opt, err := redis.ParseURL(redisAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse redis url: %w", err)
+	}
+	rds := redis.NewClient(opt)
 
 	handler := storage.NewRedisHandler(logrus.New(), rds)
-	client := NewClient(redisAddr)
+	err = handler.Ping(context.Background()) // TODO add a timeout
+	if err != nil {
+		return nil, fmt.Errorf("failed to ping redis: %w", err)
+	}
+
+	client, err := NewClient(redisAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client: %w", err)
+	}
 
 	return &Worker{
 		ID:                  uuid.New().String(),
@@ -52,7 +62,7 @@ func NewWorker(redisAddr string) *Worker {
 		client:              client,
 		fnMap:               make(map[string]registeredJob),
 		registeredFullNames: make([]string, 0),
-	}
+	}, nil
 }
 
 func (w *Worker) RegisterJobs(fn ...any) error {
@@ -198,6 +208,9 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 
 	go w.Heartbeat(ctx)
+	go w.Periodic(ctx, 30*time.Second, w.handler.PruneActiveQueues)
+	go w.Periodic(ctx, 30*time.Second, w.handler.PruneActiveWorkers)
+	go w.Periodic(ctx, 1*time.Second, w.handler.PopScheduledJobs)
 
 	for {
 		job, err := w.handler.Pop(ctx, w.registeredFullNames...)
@@ -218,6 +231,28 @@ func (w *Worker) Run(ctx context.Context) error {
 		err = w.CallJob(ctx, job)
 		if err != nil {
 			logrus.Error(err)
+		}
+	}
+}
+
+func (w *Worker) Periodic(ctx context.Context, duration time.Duration, fn func(ctx context.Context) error) error {
+	// Create a new ticker
+	ticker := time.NewTicker(duration)
+	defer ticker.Stop()
+
+	// Loop and select statement for ticker and context
+	for {
+		select {
+		// Ticker case
+		case <-ticker.C:
+			err := fn(ctx)
+			if err != nil {
+				return err // handle the error how you'd like
+			}
+
+		// Context cancellation or deadline exceeded
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }

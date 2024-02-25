@@ -10,16 +10,19 @@ import (
 )
 
 func helloJob(ctx context.Context, msg *hello.HelloJob) error {
-	job := conveyor.Job(ctx)
+	job := conveyor.CurrentJob(ctx)
 
 	fmt.Printf("%s %s %s\n", job.Uuid, msg.Greeting, msg.Name)
 	return nil
 }
 
 func main() {
-	w := conveyor.NewWorker("localhost:8080")
+	w, err := conveyor.NewWorker("redis://localhost:6379")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	err := w.RegisterJob(helloJob)
+	err = w.RegisterJob(helloJob)
 	if err != nil {
 		log.Fatal(err)
 	}

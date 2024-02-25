@@ -2,6 +2,7 @@ package conveyor
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
 	"github.com/jpoz/conveyor/wire"
@@ -18,13 +19,23 @@ type Result struct {
 	Uuid string
 }
 
-func NewClient(redisAddr string) *Client {
-	rds := redis.NewClient(&redis.Options{
-		Addr: redisAddr,
-	})
-	return &Client{
-		handler: storage.NewRedisHandler(logrus.New(), rds),
+func NewClient(redisAddr string) (*Client, error) {
+	opt, err := redis.ParseURL(redisAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse redis url: %w", err)
 	}
+
+	rds := redis.NewClient(opt)
+
+	handler := storage.NewRedisHandler(logrus.New(), rds)
+	err = handler.Ping(context.Background()) // TODO add a timeout
+	if err != nil {
+		return nil, fmt.Errorf("failed to ping redis: %w", err)
+	}
+
+	return &Client{
+		handler: handler,
+	}, nil
 }
 
 func (c *Client) Close() error {

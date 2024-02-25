@@ -17,8 +17,8 @@ var spawn int32 = 3
 var levels int32 = 3
 
 func mainJob(ctx context.Context, msg *job.MainJob) error {
-	j := conveyor.Job(ctx)
-	client := conveyor.Client(ctx)
+	j := conveyor.CurrentJob(ctx)
+	client := conveyor.CurrentClient(ctx)
 
 	_, err := client.EnqueueHeir(ctx, &job.LastJob{Level: 0})
 	if err != nil {
@@ -42,8 +42,8 @@ func mainJob(ctx context.Context, msg *job.MainJob) error {
 }
 
 func subJob(ctx context.Context, msg *job.SubJob) error {
-	j := conveyor.Job(ctx)
-	client := conveyor.Client(ctx)
+	j := conveyor.CurrentJob(ctx)
+	client := conveyor.CurrentClient(ctx)
 
 	time.Sleep(10 * time.Millisecond)
 
@@ -80,7 +80,7 @@ func subJob(ctx context.Context, msg *job.SubJob) error {
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	lastJob := func(ctx context.Context, msg *job.LastJob) error {
-		job := conveyor.Job(ctx)
+		job := conveyor.CurrentJob(ctx)
 
 		for i := int32(0); i < msg.Level; i++ {
 			fmt.Print("\t")
@@ -90,9 +90,12 @@ func main() {
 	}
 
 	go func() {
-		w := conveyor.NewWorker("localhost:8080")
+		w, err := conveyor.NewWorker("redis://localhost:6379")
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		err := w.RegisterJobs(mainJob, subJob, lastJob)
+		err = w.RegisterJobs(mainJob, subJob, lastJob)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -104,8 +107,11 @@ func main() {
 
 	go func() {
 		for {
-			c := conveyor.NewClient("localhost:8080")
-			_, err := c.Enqueue(ctx, &job.MainJob{
+			c, err := conveyor.NewClient("redis://localhost:6379")
+			if err != nil {
+				log.Fatal(err)
+			}
+			_, err = c.Enqueue(ctx, &job.MainJob{
 				Spawn:  spawn,
 				Levels: levels,
 			})
