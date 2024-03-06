@@ -4,25 +4,28 @@ import (
 	"fmt"
 )
 
-const activeQueuesKey = "queues:active"
-const activeWorkersKey = "workers:active"
-const activeJobsKey = "jobs:active"
+const prefix = "conv"
 
-const scheduledJobsKey = "scheduled"
-const failedJobsKey = "failed"
+var (
+	activeQueuesKey  = fmt.Sprintf("%s:%s", prefix, "queues:active")
+	activeWorkersKey = fmt.Sprintf("%s:%s", prefix, "workers:active")
+	activeJobsKey    = fmt.Sprintf("%s:%s", prefix, "jobs:active")
+	scheduledJobsKey = fmt.Sprintf("%s:%s", prefix, "scheduled")
+	failedJobsKey    = fmt.Sprintf("%s:%s", prefix, "failed")
+)
 
 func jobKey(uuid string) string {
-	return fmt.Sprintf("job:%s", uuid)
+	return fmt.Sprintf("%s:job:%s", prefix, uuid)
 }
 
 func childenListKey(parentUuid string) string {
-	return fmt.Sprintf("job:%s:children", parentUuid)
+	return fmt.Sprintf("%s:job:%s:children", prefix, parentUuid)
 }
 
 func childenSetKey(parentUuid string) string {
-	return fmt.Sprintf("job:%s:active", parentUuid)
+	return fmt.Sprintf("%s:job:%s:active", prefix, parentUuid)
 }
 
 func onCompleteListKey(predecessorUuid string) string {
-	return fmt.Sprintf("job:%s:onComplete", predecessorUuid)
+	return fmt.Sprintf("%s:job:%s:onComplete", prefix, predecessorUuid)
 }

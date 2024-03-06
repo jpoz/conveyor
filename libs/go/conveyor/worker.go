@@ -116,8 +116,6 @@ func (w *Worker) RegisterJob(fn any) error {
 	}
 	w.registeredFullNames = append(w.registeredFullNames, string(name))
 
-	fmt.Println("Registered job:", name)
-
 	return nil
 }
 
