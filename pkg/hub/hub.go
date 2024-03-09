@@ -4,7 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/jpoz/conveyor/pkg/storage"
-	"github.com/jpoz/conveyor/wire"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -13,7 +13,6 @@ const (
 
 type Config struct {
 	Addr     string `yaml:"addr"`
-	UiAddr   string `yaml:"uiAddr"`
 	RedisURL string `yaml:"redisURL" json:"redisURL"`
 }
 
@@ -21,6 +20,15 @@ type Server struct {
 	slog    *slog.Logger
 	config  Config
 	storage storage.Handler
+}
 
-	wire.UnimplementedHubServer
+func NewServer(log slog.Logger, config Config) (*Server, error) {
+	l := log.With(slog.String("server", "hub"))
+
+	rb, err := redis.NewClient(config.RedisURL)
+	return &Server{
+		slog:    l,
+		config:  config,
+		storage: storage.NewRedisHandler(l, config.RedisURL),
+	}, nil
 }

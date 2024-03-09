@@ -2,25 +2,34 @@ package storage
 
 import (
 	context "context"
+	"fmt"
+	"log/slog"
 
 	"github.com/jpoz/conveyor/wire"
 	"github.com/redis/go-redis/v9"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
 const DefaultMaxRetries int32 = 3
 
 type redisHandler struct {
-	rdb *redis.Client
-	log *logrus.Entry
+	rdb  *redis.Client
+	slog *slog.Logger
 }
 
-func NewRedisHandler(log *logrus.Logger, client *redis.Client) Handler {
-	return &redisHandler{
-		rdb: client,
-		log: log.WithField("storage", "redis"),
+func NewRedisHandler(log *slog.Logger, redisAddr string) (Handler, error) {
+	opt, err := redis.ParseURL(redisAddr)
+	if err != nil {
+		log.Error("failed to parse redis url", slog.Any("error", err))
+		return nil, fmt.Errorf("RedisHandler failed to parse redis url: %w", err)
 	}
+
+	rdb := redis.NewClient(opt)
+
+	return &redisHandler{
+		rdb:  rdb,
+		slog: log.With(slog.String("handler", "redis")),
+	}, nil
 }
 
 func (s *redisHandler) setJob(ctx context.Context, uuid string, jobBytes []byte) error {

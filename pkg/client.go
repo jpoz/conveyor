@@ -3,32 +3,30 @@ package conveyor
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
-	"github.com/redis/go-redis/v9"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
 type Client struct {
 	handler storage.Handler
+	log     *slog.Logger
 }
 
 type Result struct {
 	Uuid string
 }
 
-func NewClient(redisAddr string) (*Client, error) {
-	opt, err := redis.ParseURL(redisAddr)
+func NewClient(log *slog.Logger, redisAddr string) (*Client, error) {
+	l := log.With(slog.String("client", "conveyor"))
+	handler, err := storage.NewRedisHandler(l, redisAddr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse redis url: %w", err)
+		return nil, fmt.Errorf("failed to create redis handler: %w", err)
 	}
 
-	rds := redis.NewClient(opt)
-
-	handler := storage.NewRedisHandler(logrus.New(), rds)
-	err = handler.Ping(context.Background()) // TODO add a timeout
+	err = handler.Ping(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping redis: %w", err)
 	}
