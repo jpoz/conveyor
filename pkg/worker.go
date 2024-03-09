@@ -36,7 +36,10 @@ type Worker struct {
 
 	fnMap               map[string]registeredJob
 	registeredFullNames []string
+	middlewares         []WorkerMiddleware
 }
+
+type WorkerMiddleware func(ctx context.Context, job *wire.Job) error
 
 func NewWorker(redisAddr string) (*Worker, error) {
 	opt, err := redis.ParseURL(redisAddr)
@@ -117,6 +120,10 @@ func (w *Worker) RegisterJob(fn any) error {
 	w.registeredFullNames = append(w.registeredFullNames, string(name))
 
 	return nil
+}
+
+func (w *Worker) Use(fn ...WorkerMiddleware) {
+	w.middlewares = append(w.middlewares, fn...)
 }
 
 func (w *Worker) ContextFor(job *wire.Job) context.Context {
