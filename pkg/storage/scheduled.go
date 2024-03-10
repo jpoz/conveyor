@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jpoz/conveyor/wire"
@@ -37,7 +38,7 @@ func (s *redisHandler) PopScheduledJobs(ctx context.Context) error {
 			return err
 		}
 
-		s.log.Debugf("Popped job off: %#v %s", jobBytes, job)
+		s.log.Debug("Popped job", slog.Any("job", job))
 		err = s.add(ctx, job, false)
 		if err != nil {
 			return err

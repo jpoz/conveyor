@@ -1,10 +1,13 @@
 package hub
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/jpoz/conveyor/pkg/storage"
-	"github.com/redis/go-redis/v9"
+	"github.com/jpoz/goes"
 )
 
 const (
@@ -17,18 +20,38 @@ type Config struct {
 }
 
 type Server struct {
-	slog    *slog.Logger
+	log     *slog.Logger
 	config  Config
 	storage storage.Handler
 }
 
-func NewServer(log slog.Logger, config Config) (*Server, error) {
+func NewServer(log *slog.Logger, config Config) (*Server, error) {
 	l := log.With(slog.String("server", "hub"))
 
-	rb, err := redis.NewClient(config.RedisURL)
+	handler, err := storage.NewRedisHandler(l, config.RedisURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create redis handler: %w", err)
+	}
+
 	return &Server{
-		slog:    l,
+		log:     l,
 		config:  config,
-		storage: storage.NewRedisHandler(l, config.RedisURL),
+		storage: handler,
 	}, nil
+}
+
+func (s *Server) Run(ctx context.Context) error {
+	s.log.Info("starting conveyor hub server", slog.String("addr", s.config.Addr))
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", s.HomeHandler)
+	mux.HandleFunc("/jobs", s.JobsHandler)
+
+	mux.HandleFunc("/static/*", s.StaticHandler("/static"))
+	mux.HandleFunc("/js/*", JSHandler("/js", goes.Options{
+		Logger: slog.Default(),
+		Mode:   goes.ModeBuild,
+	}))
+
+	return http.ListenAndServe(s.config.Addr, mux)
 }

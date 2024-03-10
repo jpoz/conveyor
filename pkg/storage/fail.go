@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/jpoz/conveyor/wire"
@@ -52,19 +53,19 @@ func (s *redisHandler) FailJob(ctx context.Context, uuid string) error {
 
 	cmdErrs, err := pipe.Exec(ctx)
 	if err != nil {
-		s.log.Errorf("could not fail job: %s", err)
+		s.log.Error("could not fail job: %s", slog.Any("err", err))
 		return err
 	}
 	for _, err := range cmdErrs {
 		if err != nil && err.Err() != nil {
-			s.log.Errorf("could not fail job cmd error: %s(%v) %s", err.Name(), err.Args(), err)
+			s.log.Error("could not fail job cmd error: %s", slog.Any("err", err.Err()))
 			return err.Err()
 		}
 	}
 
 	err = s.incrResult(ctx, result)
 	if err != nil {
-		s.log.Errorf("could not increment result: %s", err)
+		s.log.Error("could not fail job: %s", slog.Any("err", err))
 	}
 
 	return nil

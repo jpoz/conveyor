@@ -1,0 +1,33 @@
+package views
+
+templ Dashboard() {
+	@AppLayout("Dashboard") {
+		<div class="py-4 bg-gray-100">
+			<div>
+				<h3 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Jobs </h3>
+				<div
+					class="max-w-7xl bg-white rounded-lg shadow border border-gray-200 py-4 px-2"
+					hx-get="/jobs"
+					hx-trigger="load"
+				>
+					>
+					<div class="text-center mx-auto w-8 h-8">
+						@Spinner("w-8 h-8 text-gray-50 animate-spin fill-blue-600")
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+templ Jobs() {
+	<div class="flex">
+		@Job()
+	</div>
+}
+
+templ Job() {
+	<div class="rounded-full px-4 py-2 bg-gray-100">
+		wire.StartJob
+	</div>
+}

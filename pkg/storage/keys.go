@@ -7,11 +7,12 @@ import (
 const prefix = "conv"
 
 var (
-	activeQueuesKey  = fmt.Sprintf("%s:%s", prefix, "queues:active")
-	activeWorkersKey = fmt.Sprintf("%s:%s", prefix, "workers:active")
-	activeJobsKey    = fmt.Sprintf("%s:%s", prefix, "jobs:active")
-	scheduledJobsKey = fmt.Sprintf("%s:%s", prefix, "scheduled")
-	failedJobsKey    = fmt.Sprintf("%s:%s", prefix, "failed")
+	activeQueuesKey     = fmt.Sprintf("%s:%s", prefix, "queues:active")
+	activeWorkersKey    = fmt.Sprintf("%s:%s", prefix, "workers:active")
+	activeJobsKey       = fmt.Sprintf("%s:%s", prefix, "jobs:active")
+	scheduledJobsKey    = fmt.Sprintf("%s:%s", prefix, "scheduled")
+	jobEventsChannelKey = fmt.Sprintf("%s:%s", prefix, "events")
+	failedJobsKey       = fmt.Sprintf("%s:%s", prefix, "failed")
 )
 
 func jobKey(uuid string) string {

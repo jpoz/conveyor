@@ -4,7 +4,7 @@ import (
 	context "context"
 	"testing"
 
-	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
+	conveyor "github.com/jpoz/conveyor/pkg"
 	"github.com/jpoz/conveyor/wire"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"

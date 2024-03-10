@@ -4,7 +4,7 @@ import (
 	context "context"
 	"testing"
 
-	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
+	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -119,4 +119,5 @@ func TestAddJob_OnComplete(t *testing.T) {
 	assert.Equal(t, job.Queue, rjob.Queue)
 	assert.Equal(t, job.Payload, rjob.Payload)
 	assert.Equal(t, job.ParentUuid, rjob.ParentUuid)
+	ntegrat
 }

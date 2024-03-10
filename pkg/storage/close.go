@@ -3,6 +3,7 @@ package storage
 import (
 	context "context"
 	"fmt"
+	"log/slog"
 
 	"github.com/jpoz/conveyor/wire"
 	"github.com/redis/go-redis/v9"
@@ -10,11 +11,12 @@ import (
 )
 
 func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error) {
-	log := s.log.
-		WithField("uuid", job.Uuid).
-		WithField("queue", job.Queue).
-		WithField("type", job.Type).
-		WithField("parent", job.ParentUuid)
+	log := s.log.With(
+		slog.String("uuid", job.Uuid),
+		slog.String("queue", job.Queue),
+		slog.String("type", job.Type),
+		slog.String("parent", job.ParentUuid),
+	)
 
 	hadChildren := false
 

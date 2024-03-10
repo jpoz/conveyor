@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
+	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
-	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -31,7 +31,7 @@ type Worker struct {
 	ID string
 
 	handler storage.Handler
-	log     *logrus.Entry
+	log     *slog.Logger
 	client  *Client
 
 	fnMap               map[string]registeredJob
@@ -41,20 +41,19 @@ type Worker struct {
 
 type WorkerMiddleware func(ctx context.Context, job *wire.Job) error
 
-func NewWorker(redisAddr string) (*Worker, error) {
-	opt, err := redis.ParseURL(redisAddr)
+func NewWorker(log *slog.Logger, redisAddr string) (*Worker, error) {
+	wlog := log.With(slog.String("worker", uuid.New().String()))
+	handler, err := storage.NewRedisHandler(wlog, redisAddr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse redis url: %w", err)
+		return nil, fmt.Errorf("failed to create redis handler: %w", err)
 	}
-	rds := redis.NewClient(opt)
 
-	handler := storage.NewRedisHandler(logrus.New(), rds)
 	err = handler.Ping(context.Background()) // TODO add a timeout
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping redis: %w", err)
 	}
 
-	client, err := NewClient(redisAddr)
+	client, err := NewClient(log, redisAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
@@ -63,6 +62,7 @@ func NewWorker(redisAddr string) (*Worker, error) {
 		ID:                  uuid.New().String(),
 		handler:             handler,
 		client:              client,
+		log:                 wlog,
 		fnMap:               make(map[string]registeredJob),
 		registeredFullNames: make([]string, 0),
 	}, nil

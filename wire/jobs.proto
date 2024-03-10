@@ -23,4 +23,14 @@ message Job {
   int32 retry = 9;
   int32 max_retries = 10;
   string last_failure = 11;
+  JobStatus status = 12; // only set when subscribing to events
 }
+
+enum JobStatus {
+  UNKNOWN = 0;
+  ENQUEUED = 1;
+  RUNNING = 2;
+  COMPLETED = 3;
+  FAILED = 4;
+}
+

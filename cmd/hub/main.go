@@ -2,36 +2,39 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/jpoz/conveyor/hub"
+	"github.com/jpoz/conveyor/pkg/hub"
 )
 
 func main() {
 	ctx := context.Background()
+
+	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	addr := os.Getenv("ADDR")
+	if addr == "" {
+		addr = ":4567"
+	}
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "redis://localhost:6379"
+	}
+
+	server, err := hub.NewServer(log, hub.Config{
+		Addr:     addr,
+		RedisURL: redisAddr,
+	})
+
 	ctx, cancel := context.WithCancel(ctx)
-	opts, err := hub.ParseArgs()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	config, err := hub.ReadConfig(opts.ConfigPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	server, err := hub.NewServer(opts, config)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	go func() {
 		err = server.Run(ctx)
 		if err != nil {
-			log.Fatal(err)
+			log.Error("failed to run server", slog.Any("error", err))
+			os.Exit(1)
 		}
 	}()
 
@@ -39,6 +42,6 @@ func main() {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	<-sigCh
-	log.Println("Shutting down...")
+	log.Info("Shutting down")
 	cancel()
 }

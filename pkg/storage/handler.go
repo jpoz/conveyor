@@ -6,6 +6,8 @@ import (
 	"github.com/jpoz/conveyor/wire"
 )
 
+type OnStatusChange func(ctx context.Context, job *wire.Job)
+
 type Handler interface {
 	Heartbeat(ctx context.Context, workerID string) error
 
@@ -13,6 +15,9 @@ type Handler interface {
 	AddJob(ctx context.Context, job *wire.Job) error
 	Pop(ctx context.Context, queues ...string) (*wire.Job, error)
 	PopScheduledJobs(ctx context.Context) error
+
+	Notify(ctx context.Context, job *wire.Job, status wire.JobStatus) error
+	Subscribe(ctx context.Context, onStatusChange OnStatusChange) error
 
 	CloseJob(ctx context.Context, job *wire.Job) (bool, error)
 

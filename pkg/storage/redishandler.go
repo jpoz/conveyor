@@ -13,8 +13,8 @@ import (
 const DefaultMaxRetries int32 = 3
 
 type redisHandler struct {
-	rdb  *redis.Client
-	slog *slog.Logger
+	rdb *redis.Client
+	log *slog.Logger
 }
 
 func NewRedisHandler(log *slog.Logger, redisAddr string) (Handler, error) {
@@ -27,8 +27,8 @@ func NewRedisHandler(log *slog.Logger, redisAddr string) (Handler, error) {
 	rdb := redis.NewClient(opt)
 
 	return &redisHandler{
-		rdb:  rdb,
-		slog: log.With(slog.String("handler", "redis")),
+		rdb: rdb,
+		log: log.With(slog.String("handler", "redis")),
 	}, nil
 }
 

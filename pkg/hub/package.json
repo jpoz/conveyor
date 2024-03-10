@@ -1,0 +1,17 @@
+{
+  "name": "src",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "devDependencies": {
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@shoelace-style/shoelace": "^2.13.1",
+    "htmx.org": "^1.9.10",
+    "lucide": "^0.344.0"
+  }
+}
