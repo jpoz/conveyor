@@ -177,6 +177,11 @@ func (w *Worker) callJob(job *wire.Job) error {
 
 	ctx := w.ContextFor(job)
 
+	ierr := w.handler.Notify(ctx, job, wire.JobStatus_RUNNING)
+	if ierr != nil {
+		w.log.Error("failed to notify on start", slog.String("error", ierr.Error()))
+	}
+
 	results := val.Call([]reflect.Value{
 		reflect.ValueOf(ctx),
 		argVal,
@@ -184,8 +189,18 @@ func (w *Worker) callJob(job *wire.Job) error {
 
 	err, _ = results[0].Interface().(error)
 	if err != nil {
+		ierr := w.handler.Notify(ctx, job, wire.JobStatus_FAILED)
+		if ierr != nil {
+			w.log.Error("failed to notify on failure", slog.String("error", ierr.Error()))
+		}
 		return fmt.Errorf("failed to call function: %v", err)
 	}
+
+	ierr = w.handler.Notify(ctx, job, wire.JobStatus_COMPLETED)
+	if ierr != nil {
+		w.log.Error("failed to notify on completion", slog.String("error", ierr.Error()))
+	}
+
 	return nil
 
 }

@@ -41,7 +41,7 @@ func (s *redisHandler) Subscribe(ctx context.Context, onStatusChange OnStatusCha
 				return fmt.Errorf("failed to unmarshal job: %v", err)
 			}
 
-			onStatusChange(ctx, job)
+			onStatusChange(job)
 		}
 	}
 }

@@ -1,0 +1,62 @@
+package views
+
+import (
+	"fmt"
+	"github.com/jpoz/conveyor/wire"
+)
+
+type QueueView struct {
+	Name     string
+	JobCount int64
+
+	Jobs []*wire.Job
+}
+
+script gotoQueue(queueName string) {
+	window.location.href = "/queues/" + queueName
+}
+
+templ Queues(queues []QueueView) {
+	@AppLayout("Queues", "queues") {
+		<div class="py-4 bg-gray-100">
+			<div>
+				<h3 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Queues </h3>
+				<div>
+					<ul class="divide-y divide-gray-200">
+						for _, item := range queues {
+							<li
+								class="p-3 flex justify-between items-center hover:bg-gray-50"
+								onclick={ gotoQueue(item.Name) }
+							>
+								<div class="text-sm font-medium text-gray-900">{ item.Name }</div>
+								<div class="text-sm text-gray-500">{ fmt.Sprintf("%d", item.JobCount) } jobs</div>
+							</li>
+						}
+					</ul>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+templ Queue(queue QueueView) {
+	@AppLayout(fmt.Sprintf("Queue %s", queue.Name), "queues") {
+		<div class="py-4 bg-gray-100">
+			<div>
+				<h3 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Queue { queue.Name }</h3>
+				<div>
+					<ul class="divide-y divide-gray-200">
+						for _, item := range queue.Jobs {
+							<li
+								class="p-3 flex justify-between items-center hover:bg-gray-50"
+							>
+								<div class="text-sm font-medium text-gray-900">{ item.Uuid }</div>
+								<div class="text-sm text-gray-500">{ string(item.Payload) }</div>
+							</li>
+						}
+					</ul>
+				</div>
+			</div>
+		</div>
+	}
+}

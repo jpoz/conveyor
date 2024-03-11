@@ -7,16 +7,20 @@ import (
 
 	"github.com/jpoz/conveyor/wire"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/protobuf/proto"
 )
 
 type Stats interface {
 	// Queues
+	ActiveQueues(ctx context.Context) ([]string, error)
 	ActiveQueueCount(ctx context.Context) (int64, error)
 	PruneActiveQueues(ctx context.Context) error
+	CountQueueJobs(ctx context.Context, queue string) (int64, error)
+	ListQueueJobs(ctx context.Context, queue string, start, stop int64) ([]*wire.Job, error)
 
 	// Jobs
 	ActiveJobCount(ctx context.Context) (int64, error)
-	GetJobCount(context.Context, time.Time, Result) (int64, error)
+	HistoricalJobCount(context.Context, time.Time, Result) (int64, error)
 
 	// Workers
 	ActiveWorkerCount(ctx context.Context) (int64, error)
@@ -51,11 +55,41 @@ func (s *redisHandler) ActiveQueueCount(ctx context.Context) (int64, error) {
 	return s.rdb.ZCard(ctx, activeQueuesKey).Result()
 }
 
+func (s *redisHandler) ActiveQueues(ctx context.Context) ([]string, error) {
+	result, err := s.rdb.ZRange(ctx, activeQueuesKey, 0, -1).Result()
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (s *redisHandler) CountQueueJobs(ctx context.Context, queue string) (int64, error) {
+	return s.rdb.LLen(ctx, queueKey(queue)).Result()
+}
+
+func (s *redisHandler) ListQueueJobs(ctx context.Context, queue string, start, stop int64) ([]*wire.Job, error) {
+	jobBts, err := s.rdb.LRange(ctx, queueKey(queue), start, stop).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	jobs := make([]*wire.Job, len(jobBts))
+	for i, bts := range jobBts {
+		jobs[i] = &wire.Job{}
+		err = proto.Unmarshal([]byte(bts), jobs[i])
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal job: %v", err)
+		}
+	}
+
+	return jobs, nil
+}
+
 func (s *redisHandler) ActiveWorkerCount(ctx context.Context) (int64, error) {
 	return s.rdb.ZCard(ctx, activeWorkersKey).Result()
 }
 
-func (s *redisHandler) GetJobCount(ctx context.Context, t time.Time, result Result) (int64, error) {
+func (s *redisHandler) HistoricalJobCount(ctx context.Context, t time.Time, result Result) (int64, error) {
 	key := fmt.Sprintf("%s:%s", result.String(), t.Format("2006-01-02_15:04"))
 
 	val, err := s.rdb.Get(ctx, key).Int64()
@@ -90,11 +124,6 @@ func (s *redisHandler) PruneActiveWorkers(ctx context.Context) error {
 
 func (s *redisHandler) addActiveJob(ctx context.Context, job *wire.Job) error {
 	err := s.rdb.SAdd(ctx, activeJobsKey, job.Uuid).Err()
-	if err != nil {
-		return err
-	}
-
-	err = s.queueCheckIn(ctx, job.Queue)
 	if err != nil {
 		return err
 	}

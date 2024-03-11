@@ -7,16 +7,16 @@ import (
 const prefix = "conv"
 
 var (
+	activeJobsKey       = fmt.Sprintf("%s:%s", prefix, "jobs:active")
 	activeQueuesKey     = fmt.Sprintf("%s:%s", prefix, "queues:active")
 	activeWorkersKey    = fmt.Sprintf("%s:%s", prefix, "workers:active")
-	activeJobsKey       = fmt.Sprintf("%s:%s", prefix, "jobs:active")
-	scheduledJobsKey    = fmt.Sprintf("%s:%s", prefix, "scheduled")
-	jobEventsChannelKey = fmt.Sprintf("%s:%s", prefix, "events")
 	failedJobsKey       = fmt.Sprintf("%s:%s", prefix, "failed")
+	jobEventsChannelKey = fmt.Sprintf("%s:%s", prefix, "events")
+	scheduledJobsKey    = fmt.Sprintf("%s:%s", prefix, "scheduled")
 )
 
-func jobKey(uuid string) string {
-	return fmt.Sprintf("%s:job:%s", prefix, uuid)
+func queueKey(queue string) string {
+	return fmt.Sprintf("%s:queue:%s", prefix, queue)
 }
 
 func childenListKey(parentUuid string) string {
@@ -25,6 +25,10 @@ func childenListKey(parentUuid string) string {
 
 func childenSetKey(parentUuid string) string {
 	return fmt.Sprintf("%s:job:%s:active", prefix, parentUuid)
+}
+
+func jobKey(uuid string) string {
+	return fmt.Sprintf("%s:job:%s", prefix, uuid)
 }
 
 func onCompleteListKey(predecessorUuid string) string {

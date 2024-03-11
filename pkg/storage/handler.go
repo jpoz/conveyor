@@ -6,7 +6,7 @@ import (
 	"github.com/jpoz/conveyor/wire"
 )
 
-type OnStatusChange func(ctx context.Context, job *wire.Job)
+type OnStatusChange func(job *wire.Job)
 
 type Handler interface {
 	Heartbeat(ctx context.Context, workerID string) error

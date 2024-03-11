@@ -4,23 +4,22 @@ import (
 	context "context"
 	"testing"
 
-	conveyor "github.com/jpoz/conveyor/pkg"
 	"github.com/jpoz/conveyor/wire"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestGetJob(t *testing.T) {
 	ctx := context.Background()
-	rdb, s := NewRedisClient(t)
-	store := storage.NewRedisHandler(logrus.New(), rdb)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	// if the job is missing
 	job, err := store.GetJob(ctx, "foo")
 	assert.NoError(t, err)
 	assert.Nil(t, job)
+
+	rdb := RedisClient(t, s)
 
 	// if the job is present
 	job = &wire.Job{}
@@ -36,5 +35,4 @@ func TestGetJob(t *testing.T) {
 	job, err = store.GetJob(ctx, "bar")
 	assert.Nil(t, job)
 	assert.Error(t, err)
-
 }

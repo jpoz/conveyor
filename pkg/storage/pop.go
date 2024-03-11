@@ -18,12 +18,21 @@ func (s *redisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, er
 		for _, queue := range queues {
 			err := s.queueCheckIn(ctx, queue)
 			if err != nil {
-				s.log.Error("failed to check in to queue", slog.Any("queue", queue), slog.Any("error", err))
+				s.log.Error(
+					"failed to check in to queue",
+					slog.Any("queue", queue),
+					slog.Any("error", err),
+				)
 			}
 		}
 	}()
 
-	payload, err := s.rdb.BRPop(ctx, 2*time.Second, queues...).Result()
+	queueKeys := make([]string, len(queues))
+	for i, queue := range queues {
+		queueKeys[i] = queueKey(queue)
+	}
+
+	payload, err := s.rdb.BRPop(ctx, 2*time.Second, queueKeys...).Result()
 	if err == redis.Nil {
 		return nil, nil
 	}

@@ -53,8 +53,13 @@ hub: docker  ## Run hub
 	$(GOCMD) run cmd/hub/main.go
 
 .PHONY: dev_hub
-dev_hub: docker ## Run hub (rebuilt with reflex)
+dev_hub: docker ## Run hub (rebuilt with air)
 	(cd pkg/hub && air) 
+
+.PHONY: dev_recurring_job
+dev_recurring_job: docker ## Run recurring job (for development)
+	go run _examples/recurring/main.go
+
 
 .PHONY: dev_worker
 dev_worker: docker

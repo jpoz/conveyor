@@ -44,11 +44,14 @@ func (s *Server) Run(ctx context.Context) error {
 	s.log.Info("starting conveyor hub server", slog.String("addr", s.config.Addr))
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", s.HomeHandler)
-	mux.HandleFunc("/jobs", s.JobsHandler)
+	mux.HandleFunc("GET /", s.HomeHandler)
+	mux.HandleFunc("GET /jobs", s.JobsHandler)
+	mux.HandleFunc("GET /queues", s.QueuesPageHandler)
+	mux.HandleFunc("GET /queues/{queueName}", s.QueuePageHandler)
+	mux.HandleFunc("GET /events", s.EventHandler)
 
-	mux.HandleFunc("/static/*", s.StaticHandler("/static"))
-	mux.HandleFunc("/js/*", JSHandler("/js", goes.Options{
+	mux.HandleFunc("GET /static/*", s.StaticHandler("/static"))
+	mux.HandleFunc("GET /js/*", JSHandler("/js", goes.Options{
 		Logger: slog.Default(),
 		Mode:   goes.ModeBuild,
 	}))

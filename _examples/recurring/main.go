@@ -46,8 +46,6 @@ func subJob(ctx context.Context, msg *job.SubJob) error {
 	j := conveyor.CurrentJob(ctx)
 	client := conveyor.CurrentClient(ctx)
 
-	time.Sleep(100 * time.Millisecond)
-
 	_, err := client.EnqueueHeir(ctx, &job.LastJob{Level: msg.Level, Count: msg.Count})
 	if err != nil {
 		return err
@@ -93,36 +91,39 @@ func main() {
 
 	l := slog.Default()
 
-	go func() {
-		w, err := conveyor.NewWorker(l, "redis://localhost:6379")
-		if err != nil {
-			log.Fatal(err)
-		}
+	fmt.Println("Starting...", lastJob)
 
-		err = w.RegisterJobs(mainJob, subJob, lastJob)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = w.Run(ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
+	// go func() {
+	// 	w, err := conveyor.NewWorker(l, "redis://localhost:6379")
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	//
+	// 	err = w.RegisterJobs(mainJob, subJob, lastJob)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	err = w.Run(ctx)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// }()
 
 	go func() {
+		c, err := conveyor.NewClient(l, "redis://localhost:6379")
+		if err != nil {
+			log.Fatal(err)
+		}
 		for {
-			c, err := conveyor.NewClient(l, "redis://localhost:6379")
-			if err != nil {
-				log.Fatal(err)
-			}
-			_, err = c.Enqueue(ctx, &job.MainJob{
+			r, err := c.Enqueue(ctx, &job.MainJob{
 				Spawn:  spawn,
 				Levels: levels,
 			})
 			if err != nil {
 				log.Fatal(err)
 			}
-			time.Sleep(30 * time.Second)
+			l.Info("Enqueued", slog.String("id", r.Uuid))
+			time.Sleep(4 * time.Second)
 		}
 	}()
 

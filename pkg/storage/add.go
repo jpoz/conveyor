@@ -64,7 +64,8 @@ func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) 
 		}
 	}
 
-	err = s.rdb.LPush(ctx, job.Queue, jobBytes).Err()
+	key := queueKey(job.Queue)
+	err = s.rdb.LPush(ctx, key, jobBytes).Err()
 	if err != nil {
 		return fmt.Errorf("%w failed to add to job to queue: %v", ErrFatalError, err)
 	}
