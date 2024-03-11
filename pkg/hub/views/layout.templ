@@ -1,0 +1,57 @@
+package views
+
+const (
+	activeTabStyle   = "bg-gray-900 text-white rounded-md px-3 py-2 text-sm font-medium"
+	inactiveTabStyle = "text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium"
+)
+
+templ AppLayout(title, current string) {
+	<!DOCTYPE html>
+	<html class="h-full bg-gray-100" lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Conveyor - { title }</title>
+			<link rel="stylesheet" href="/static/app.css"/>
+			<script src="/static/htmx.min.js" defer></script>
+			<script src="/static/sse.js" defer></script>
+			<script src="/js/main.js" defer></script>
+		</head>
+		<body class="h-full">
+			<div class="min-h-full">
+				<nav class="bg-gray-800">
+					<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+						<div class="flex h-16 items-center justify-between">
+							<div class="flex items-center">
+								<div class="flex-shrink-0">
+									<img class="h-8 w-8" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=500" alt="Conveyor"/>
+								</div>
+								@nav(current)
+							</div>
+						</div>
+					</div>
+				</nav>
+				<main>
+					<div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+						{ children... }
+					</div>
+				</main>
+			</div>
+		</body>
+	</html>
+}
+
+templ nav(current string) {
+	<nav class="flex space-x-4 ml-4" aria-label="Tabs">
+		<a class={ tabStyle(current, "dashboard") } href={ templ.SafeURL("/") }>Dashboard</a>
+		<a class={ tabStyle(current, "stream") } href={ templ.SafeURL("/stream") }>Stream</a>
+		<a class={ tabStyle(current, "queues") } href={ templ.SafeURL("/queues") }>Queues</a>
+	</nav>
+}
+
+func tabStyle(current, tab string) string {
+	if current == tab {
+		return activeTabStyle
+	}
+	return inactiveTabStyle
+}

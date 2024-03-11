@@ -4,17 +4,15 @@ import (
 	context "context"
 	"testing"
 
-	"github.com/jpoz/conveyor/libs/go/conveyor/storage"
+	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestAddJob(t *testing.T) {
 	ctx := context.Background()
-	rdb, s := NewRedisClient(t)
-	store := storage.NewRedisHandler(logrus.New(), rdb)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	// if the job is nil
@@ -32,11 +30,12 @@ func TestAddJob(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, job.Uuid) // Make sure we got a uuid
 
-	count, err := rdb.LLen(ctx, "foo.Bar").Result()
+	rdb := RedisClient(t, s)
+	count, err := rdb.LLen(ctx, storage.QueueKey(job.Queue)).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), count)
 
-	jbytes, err := rdb.LPop(ctx, "foo.Bar").Result()
+	jbytes, err := rdb.LPop(ctx, storage.QueueKey(job.Queue)).Result()
 	assert.NoError(t, err)
 	assert.NotNil(t, jbytes)
 
@@ -51,8 +50,7 @@ func TestAddJob(t *testing.T) {
 
 func TestAddJob_Child(t *testing.T) {
 	ctx := context.Background()
-	rdb, s := NewRedisClient(t)
-	store := storage.NewRedisHandler(logrus.New(), rdb)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -67,11 +65,12 @@ func TestAddJob_Child(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, job.Uuid) // Make sure we got a uuid
 
-	count, err := rdb.LLen(ctx, "job:1234-5678-9012-3456:children").Result()
+	rdb := RedisClient(t, s)
+	count, err := rdb.LLen(ctx, storage.ChildenListKey(job.ParentUuid)).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), count)
 
-	jbytes, err := rdb.RPop(ctx, "job:1234-5678-9012-3456:children").Result()
+	jbytes, err := rdb.RPop(ctx, storage.ChildenListKey(job.ParentUuid)).Result()
 	assert.NoError(t, err)
 	assert.NotNil(t, jbytes)
 
@@ -88,8 +87,7 @@ func TestAddJob_Child(t *testing.T) {
 
 func TestAddJob_OnComplete(t *testing.T) {
 	ctx := context.Background()
-	rdb, s := NewRedisClient(t)
-	store := storage.NewRedisHandler(logrus.New(), rdb)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -102,11 +100,12 @@ func TestAddJob_OnComplete(t *testing.T) {
 	err := store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
-	count, err := rdb.LLen(ctx, "job:1234-5678-9012-3456:onComplete").Result()
+	rdb := RedisClient(t, s)
+	count, err := rdb.LLen(ctx, storage.OnCompleteListKey(job.PredecessorUuid)).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), count)
 
-	jbytes, err := rdb.RPop(ctx, "job:1234-5678-9012-3456:onComplete").Result()
+	jbytes, err := rdb.RPop(ctx, storage.OnCompleteListKey(job.PredecessorUuid)).Result()
 	assert.NoError(t, err)
 	assert.NotNil(t, jbytes)
 

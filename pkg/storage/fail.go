@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/jpoz/conveyor/wire"
@@ -10,7 +11,7 @@ import (
 )
 
 func (s *redisHandler) FailJob(ctx context.Context, uuid string) error {
-	str, err := s.rdb.Get(ctx, jobKey(uuid)).Result()
+	str, err := s.rdb.Get(ctx, JobKey(uuid)).Result()
 	if err != nil {
 		return err
 	}
@@ -36,35 +37,35 @@ func (s *redisHandler) FailJob(ctx context.Context, uuid string) error {
 
 	pipe := s.rdb.Pipeline()
 
-	pipe.Del(ctx, jobKey(uuid))
-	pipe.Del(ctx, onCompleteListKey(uuid))
-	pipe.Del(ctx, childenListKey(uuid))
-	pipe.SRem(ctx, activeJobsKey, uuid)
+	pipe.Del(ctx, JobKey(uuid))
+	pipe.Del(ctx, OnCompleteListKey(uuid))
+	pipe.Del(ctx, ChildenListKey(uuid))
+	pipe.SRem(ctx, ActiveJobsKey, uuid)
 
 	var result Result
 	if job.Retry >= maxRetries {
 		result = ResultFailure
-		pipe.LPush(ctx, failedJobsKey, jobBytes)
+		pipe.LPush(ctx, FailedJobsKey, jobBytes)
 	} else {
 		result = ResultError
-		pipe.ZAdd(ctx, scheduledJobsKey, redis.Z{Score: float64(retryAt.Unix()), Member: jobBytes})
+		pipe.ZAdd(ctx, ScheduledJobsKey, redis.Z{Score: float64(retryAt.Unix()), Member: jobBytes})
 	}
 
 	cmdErrs, err := pipe.Exec(ctx)
 	if err != nil {
-		s.log.Errorf("could not fail job: %s", err)
+		s.log.Error("could not fail job: %s", slog.Any("err", err))
 		return err
 	}
 	for _, err := range cmdErrs {
 		if err != nil && err.Err() != nil {
-			s.log.Errorf("could not fail job cmd error: %s(%v) %s", err.Name(), err.Args(), err)
+			s.log.Error("could not fail job cmd error: %s", slog.Any("err", err.Err()))
 			return err.Err()
 		}
 	}
 
 	err = s.incrResult(ctx, result)
 	if err != nil {
-		s.log.Errorf("could not increment result: %s", err)
+		s.log.Error("could not fail job: %s", slog.Any("err", err))
 	}
 
 	return nil

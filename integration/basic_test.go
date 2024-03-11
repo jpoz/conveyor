@@ -12,8 +12,7 @@ import (
 	"time"
 
 	"github.com/jpoz/conveyor/fixtures"
-	"github.com/jpoz/conveyor/hub"
-	"github.com/jpoz/conveyor/libs/go/conveyor"
+	conveyor "github.com/jpoz/conveyor/pkg"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,30 +27,6 @@ func TestBasic(t *testing.T) {
 
 	data := &SafeData{}
 
-	// Run Hub
-	wg.Add(1)
-	go func(t *testing.T) {
-		args := hub.Config{
-			Addr:     addr,
-			RedisURL: "redis://localhost:6382",
-		}
-		server, err := hub.NewServer(hub.ServerArgs{}, args)
-		fmt.Println("server created")
-		wg.Done()
-		if err != nil {
-			errs <- err
-		}
-
-		close(errs)
-		err = server.Run(ctx)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		fmt.Println("hub done")
-	}(t)
-
-	wg.Wait()
 	for err := range errs {
 		t.Error(err)
 	}

@@ -30,14 +30,14 @@ func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) 
 
 	if job.ParentUuid != "" && !deadParent {
 		// Parent is still running, add to children list
-		err = s.rdb.LPush(ctx, childenListKey(job.ParentUuid), jobBytes).Err()
+		err = s.rdb.LPush(ctx, ChildenListKey(job.ParentUuid), jobBytes).Err()
 		if err != nil {
 			return fmt.Errorf("%w add failed to add to children list: %v", ErrFatalError, err)
 		}
 		return nil
 	} else if job.PredecessorUuid != "" && !deadParent {
 		// Parent is still running, add to onComplete list
-		err = s.rdb.LPush(ctx, onCompleteListKey(job.PredecessorUuid), jobBytes).Err()
+		err = s.rdb.LPush(ctx, OnCompleteListKey(job.PredecessorUuid), jobBytes).Err()
 		if err != nil {
 			return err
 		}
@@ -46,7 +46,7 @@ func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) 
 		if job.RunAt.AsTime().After(time.Now()) {
 			return s.rdb.ZAdd(
 				ctx,
-				scheduledJobsKey,
+				ScheduledJobsKey,
 				redis.Z{
 					Score:  float64(job.RunAt.AsTime().Unix()),
 					Member: jobBytes,
@@ -58,13 +58,14 @@ func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) 
 	if job.ParentUuid != "" {
 		// Parent is dead, add to children set to keep track of which
 		// children are still running
-		err = s.rdb.SAdd(ctx, childenSetKey(job.ParentUuid), job.Uuid).Err()
+		err = s.rdb.SAdd(ctx, ChildenSetKey(job.ParentUuid), job.Uuid).Err()
 		if err != nil {
 			return err
 		}
 	}
 
-	err = s.rdb.LPush(ctx, job.Queue, jobBytes).Err()
+	key := QueueKey(job.Queue)
+	err = s.rdb.LPush(ctx, key, jobBytes).Err()
 	if err != nil {
 		return fmt.Errorf("%w failed to add to job to queue: %v", ErrFatalError, err)
 	}

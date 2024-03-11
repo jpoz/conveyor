@@ -1,0 +1,21 @@
+syntax = "proto3";
+package main;
+
+option go_package = "github.com/jpoz/conveyor/_examples/recurring";
+
+message MainJob {
+  int32 spawn = 1;
+  int32 levels = 2;
+}
+
+message SubJob {
+  int32 level = 1;
+  int32 count = 2;
+  int32 spawn = 3;
+  int32 levels = 4;
+}
+
+message LastJob {
+  int32 level = 1;
+  int32 count = 2;
+}

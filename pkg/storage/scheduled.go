@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jpoz/conveyor/wire"
@@ -15,7 +16,7 @@ func (s *redisHandler) PopScheduledJobs(ctx context.Context) error {
 	ts := fmt.Sprintf("%d", t)
 	jobs, err := s.rdb.ZRangeByScore(
 		ctx,
-		scheduledJobsKey,
+		ScheduledJobsKey,
 		&redis.ZRangeBy{Min: "-inf", Max: ts},
 	).Result()
 	if err != nil {
@@ -26,7 +27,7 @@ func (s *redisHandler) PopScheduledJobs(ctx context.Context) error {
 	}
 
 	for _, jobBytes := range jobs {
-		err := s.rdb.ZRem(ctx, scheduledJobsKey, jobBytes).Err()
+		err := s.rdb.ZRem(ctx, ScheduledJobsKey, jobBytes).Err()
 		if err != nil {
 			return err
 		}
@@ -37,7 +38,7 @@ func (s *redisHandler) PopScheduledJobs(ctx context.Context) error {
 			return err
 		}
 
-		s.log.Debugf("Popped job off: %#v %s", jobBytes, job)
+		s.log.Debug("Popped job", slog.Any("job", job))
 		err = s.add(ctx, job, false)
 		if err != nil {
 			return err
