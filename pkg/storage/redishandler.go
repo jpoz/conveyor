@@ -33,7 +33,7 @@ func NewRedisHandler(log *slog.Logger, redisAddr string) (Handler, error) {
 }
 
 func (s *redisHandler) setJob(ctx context.Context, uuid string, jobBytes []byte) error {
-	err := s.rdb.Set(ctx, jobKey(uuid), jobBytes, 0).Err()
+	err := s.rdb.Set(ctx, JobKey(uuid), jobBytes, 0).Err()
 	if err != nil {
 		return err
 	}

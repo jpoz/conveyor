@@ -48,15 +48,15 @@ func (r Result) String() string {
 }
 
 func (s *redisHandler) ActiveJobCount(ctx context.Context) (int64, error) {
-	return s.rdb.SCard(ctx, activeJobsKey).Result()
+	return s.rdb.SCard(ctx, ActiveJobsKey).Result()
 }
 
 func (s *redisHandler) ActiveQueueCount(ctx context.Context) (int64, error) {
-	return s.rdb.ZCard(ctx, activeQueuesKey).Result()
+	return s.rdb.ZCard(ctx, ActiveQueuesKey).Result()
 }
 
 func (s *redisHandler) ActiveQueues(ctx context.Context) ([]string, error) {
-	result, err := s.rdb.ZRange(ctx, activeQueuesKey, 0, -1).Result()
+	result, err := s.rdb.ZRange(ctx, ActiveQueuesKey, 0, -1).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -64,11 +64,11 @@ func (s *redisHandler) ActiveQueues(ctx context.Context) ([]string, error) {
 }
 
 func (s *redisHandler) CountQueueJobs(ctx context.Context, queue string) (int64, error) {
-	return s.rdb.LLen(ctx, queueKey(queue)).Result()
+	return s.rdb.LLen(ctx, QueueKey(queue)).Result()
 }
 
 func (s *redisHandler) ListQueueJobs(ctx context.Context, queue string, start, stop int64) ([]*wire.Job, error) {
-	jobBts, err := s.rdb.LRange(ctx, queueKey(queue), start, stop).Result()
+	jobBts, err := s.rdb.LRange(ctx, QueueKey(queue), start, stop).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (s *redisHandler) ListQueueJobs(ctx context.Context, queue string, start, s
 }
 
 func (s *redisHandler) ActiveWorkerCount(ctx context.Context) (int64, error) {
-	return s.rdb.ZCard(ctx, activeWorkersKey).Result()
+	return s.rdb.ZCard(ctx, ActiveWorkersKey).Result()
 }
 
 func (s *redisHandler) HistoricalJobCount(ctx context.Context, t time.Time, result Result) (int64, error) {
@@ -106,7 +106,7 @@ func (s *redisHandler) HistoricalJobCount(ctx context.Context, t time.Time, resu
 // PruneActiveQueues will remove queues that haven't pinned a job in the last 30 seconds
 func (s *redisHandler) PruneActiveQueues(ctx context.Context) error {
 	s.log.Debug("Pruning active queues")
-	err := s.rdb.ZRemRangeByScore(ctx, activeQueuesKey, "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
+	err := s.rdb.ZRemRangeByScore(ctx, ActiveQueuesKey, "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
 	if err != nil {
 		return fmt.Errorf("could not prune active queues: %w", err)
 	}
@@ -115,7 +115,7 @@ func (s *redisHandler) PruneActiveQueues(ctx context.Context) error {
 
 func (s *redisHandler) PruneActiveWorkers(ctx context.Context) error {
 	s.log.Debug("Pruning active workers")
-	err := s.rdb.ZRemRangeByScore(ctx, activeWorkersKey, "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
+	err := s.rdb.ZRemRangeByScore(ctx, ActiveWorkersKey, "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
 	if err != nil {
 		return fmt.Errorf("could not prune active queues: %w", err)
 	}
@@ -123,7 +123,7 @@ func (s *redisHandler) PruneActiveWorkers(ctx context.Context) error {
 }
 
 func (s *redisHandler) addActiveJob(ctx context.Context, job *wire.Job) error {
-	err := s.rdb.SAdd(ctx, activeJobsKey, job.Uuid).Err()
+	err := s.rdb.SAdd(ctx, ActiveJobsKey, job.Uuid).Err()
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (s *redisHandler) addActiveJob(ctx context.Context, job *wire.Job) error {
 }
 
 func (s *redisHandler) queueCheckIn(ctx context.Context, queue string) error {
-	err := s.rdb.ZAdd(ctx, activeQueuesKey, redis.Z{
+	err := s.rdb.ZAdd(ctx, ActiveQueuesKey, redis.Z{
 		Score:  float64(time.Now().Unix()),
 		Member: queue,
 	}).Err()
@@ -144,7 +144,7 @@ func (s *redisHandler) queueCheckIn(ctx context.Context, queue string) error {
 }
 
 func (s *redisHandler) workerCheckIn(ctx context.Context, workerID string) error {
-	err := s.rdb.ZAdd(ctx, activeWorkersKey, redis.Z{
+	err := s.rdb.ZAdd(ctx, ActiveWorkersKey, redis.Z{
 		Score:  float64(time.Now().Unix()),
 		Member: workerID,
 	}).Err()
@@ -156,7 +156,7 @@ func (s *redisHandler) workerCheckIn(ctx context.Context, workerID string) error
 }
 
 func (s *redisHandler) removeActiveJob(ctx context.Context, job *wire.Job, result Result) error {
-	err := s.rdb.SRem(ctx, activeJobsKey, job.Uuid).Err()
+	err := s.rdb.SRem(ctx, ActiveJobsKey, job.Uuid).Err()
 	if err != nil {
 		return err
 	}

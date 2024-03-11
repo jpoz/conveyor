@@ -25,7 +25,7 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 	// first close is still running. Which would mean multiple go routines would be
 	// adding childen jobs. I think that's okay, but needs testing.
 	for {
-		childJobBytes, err := s.rdb.RPop(ctx, childenListKey(job.Uuid)).Result()
+		childJobBytes, err := s.rdb.RPop(ctx, ChildenListKey(job.Uuid)).Result()
 		if err == redis.Nil {
 			log.Debug("No more children")
 			break
@@ -57,7 +57,7 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 	// Close will be called each time a child job is closed
 	// Even if no new child jobs are added, we still want to
 	// check if there are any children still running
-	childCount, err := s.rdb.SCard(ctx, childenSetKey(job.Uuid)).Result()
+	childCount, err := s.rdb.SCard(ctx, ChildenSetKey(job.Uuid)).Result()
 	if err != redis.Nil {
 		if err != nil {
 			return false, fmt.Errorf("%w getting child count: %s", ErrFatalError, err)
@@ -71,7 +71,7 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 
 	// Parent is dead, childen are complete, enqueue to onComplete jobs
 	for {
-		onCompleteJobBytes, err := s.rdb.RPop(ctx, onCompleteListKey(job.Uuid)).Result()
+		onCompleteJobBytes, err := s.rdb.RPop(ctx, OnCompleteListKey(job.Uuid)).Result()
 		if err == redis.Nil {
 			log.Debug("No more onComplete jobs")
 			break
@@ -98,7 +98,7 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 	// If the job has a parent, remove itself from the children, close the parent
 	if job.ParentUuid != "" {
 		log.Debug("Removing job from children")
-		err = s.rdb.SRem(ctx, childenSetKey(job.ParentUuid), job.Uuid).Err()
+		err = s.rdb.SRem(ctx, ChildenSetKey(job.ParentUuid), job.Uuid).Err()
 		if err != nil {
 			return false, err
 		}
@@ -125,7 +125,7 @@ func (s *redisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 		return false, fmt.Errorf("could not remove job from active jobs: %w", err)
 	}
 
-	err = s.rdb.Del(ctx, jobKey(job.Uuid)).Err()
+	err = s.rdb.Del(ctx, JobKey(job.Uuid)).Err()
 	if err != nil {
 		return false, err
 	}

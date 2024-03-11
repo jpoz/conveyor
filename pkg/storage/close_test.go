@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
 	"github.com/redis/go-redis/v9"
@@ -21,6 +22,7 @@ func TestCloseJob(t *testing.T) {
 	defer s.Close()
 
 	job := &wire.Job{
+		Uuid:    uuid.New().String(),
 		Type:    "foo.Bar",
 		Queue:   "foo.Bar",
 		Payload: []byte("bar"),
@@ -29,8 +31,9 @@ func TestCloseJob(t *testing.T) {
 	err = store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
-	job, err = store.Pop(ctx, "foo.Bar")
+	job, err = store.Pop(ctx, job.Queue)
 	assert.NoError(t, err)
+	require.NotNil(t, job)
 
 	bool, err := store.CloseJob(ctx, job)
 	assert.NoError(t, err)
@@ -53,8 +56,9 @@ func TestCloseJob_multiple_closes(t *testing.T) {
 	err = store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
-	job, err = store.Pop(ctx, "foo.Bar")
+	job, err = store.Pop(ctx, job.Queue)
 	assert.NoError(t, err)
+	require.NotNil(t, job)
 
 	for i := 0; i < 10; i++ {
 		bool, err := store.CloseJob(ctx, job)
@@ -79,8 +83,9 @@ func TestCloseJob_withChild(t *testing.T) {
 	err = store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
-	job, err = store.Pop(ctx, "foo.Bar")
+	job, err = store.Pop(ctx, job.Queue)
 	assert.NoError(t, err)
+	require.NotNil(t, job)
 
 	childJob := &wire.Job{
 		Type:       "foo.Baz",
@@ -96,7 +101,7 @@ func TestCloseJob_withChild(t *testing.T) {
 	require.NoError(t, err)
 	rdb := redis.NewClient(opt)
 
-	jb, err := rdb.Get(ctx, "job:"+job.Uuid).Result()
+	jb, err := rdb.Get(ctx, storage.JobKey(job.Uuid)).Result()
 	assert.NoError(t, err)
 	rjob := &wire.Job{}
 	err = proto.Unmarshal([]byte(jb), rjob)
@@ -161,19 +166,19 @@ func TestCloseJob_withChildren(t *testing.T) {
 	bool, err := store.CloseJob(ctx, job)
 	assert.NoError(t, err)
 	assert.False(t, bool) // should not close since the child is still open
-	_, err = rdb.Get(ctx, "job:"+job.Uuid).Result()
+	_, err = rdb.Get(ctx, storage.JobKey(job.Uuid)).Result()
 	assert.NoError(t, err)
 
 	bool, err = store.CloseJob(ctx, childJobs[0])
 	assert.NoError(t, err)
 	assert.False(t, bool) // should not close since siblings are still open
-	_, err = rdb.Get(ctx, "job:"+job.Uuid).Result()
+	_, err = rdb.Get(ctx, storage.JobKey(job.Uuid)).Result()
 	assert.NoError(t, err)
 
 	bool, err = store.CloseJob(ctx, childJobs[1])
 	assert.NoError(t, err)
 	assert.False(t, bool) // should not close since sibling is still open
-	_, err = rdb.Get(ctx, "job:"+job.Uuid).Result()
+	_, err = rdb.Get(ctx, storage.JobKey(job.Uuid)).Result()
 	assert.NoError(t, err)
 
 	bool, err = store.CloseJob(ctx, childJobs[2])
@@ -197,8 +202,9 @@ func TestCloseJob_withOnComplete(t *testing.T) {
 	err = store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
-	job, err = store.Pop(ctx, "foo.Bar")
+	job, err = store.Pop(ctx, job.Queue)
 	assert.NoError(t, err)
+	assert.NotNil(t, job)
 
 	completeJob := &wire.Job{
 		Type:            "foo.Com",
@@ -209,7 +215,7 @@ func TestCloseJob_withOnComplete(t *testing.T) {
 	err = store.AddJob(ctx, completeJob)
 	assert.NoError(t, err)
 
-	comJob, err := store.Pop(ctx, "foo.Com")
+	comJob, err := store.Pop(ctx, completeJob.Queue)
 	assert.NoError(t, err)
 	assert.Nil(t, comJob)
 
@@ -218,8 +224,9 @@ func TestCloseJob_withOnComplete(t *testing.T) {
 	assert.True(t, bool)
 
 	// onComplete job has been enqueued
-	comJob, err = store.Pop(ctx, "foo.Com")
+	comJob, err = store.Pop(ctx, completeJob.Queue)
 	assert.NoError(t, err)
+	require.NotNil(t, comJob)
 	assert.NotNil(t, comJob)
 	assert.Equal(t, "foo.Com", comJob.Type)
 	assert.Equal(t, []byte("complete"), comJob.Payload)
@@ -251,8 +258,8 @@ func TestCloseJob_errors_invalid_children_list(t *testing.T) {
 	rdb := redis.NewClient(opt)
 
 	// Force an error by setting the children to a wrong type
-	rdb.Del(ctx, "job:"+job.Uuid+":children")
-	rdb.Set(ctx, "job:"+job.Uuid+":children", "wrongType", 0)
+	rdb.Del(ctx, storage.ChildenListKey(job.Uuid))
+	rdb.Set(ctx, storage.ChildenListKey(job.Uuid), "wrongType", 0)
 
 	bool, err := store.CloseJob(ctx, job)
 	assert.ErrorIs(t, err, storage.ErrFatalError)
@@ -283,7 +290,7 @@ func TestCloseJob_errors_invalid_child_payload(t *testing.T) {
 	rdb := redis.NewClient(opt)
 
 	// Force an error by setting a child as an invalid wire.Job
-	err = rdb.LPush(ctx, "job:"+job.Uuid+":children", "invalidPayload").Err()
+	err = rdb.LPush(ctx, storage.ChildenListKey(job.Uuid), "invalidPayload").Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)
@@ -325,7 +332,7 @@ func TestCloseJob_errors_child_queue_is_invalid_type(t *testing.T) {
 	rdb := redis.NewClient(opt)
 
 	// Force an setting the children's queue to the wrong type
-	err = rdb.Set(ctx, childJob.Queue, "oops", 0).Err()
+	err = rdb.Set(ctx, storage.QueueKey(childJob.Queue), "oops", 0).Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)
@@ -357,7 +364,7 @@ func TestCloseJob_errors_children_set_invalid_type(t *testing.T) {
 	rdb := redis.NewClient(opt)
 
 	// Force an error by setting the active children set to the wrong type
-	err = rdb.Set(ctx, "job:"+job.Uuid+":active", "oops", 0).Err()
+	err = rdb.Set(ctx, storage.ChildenSetKey(job.Uuid), "oops", 0).Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)
@@ -381,7 +388,7 @@ func TestCloseJob_errors_onCompelete_list_invalid_type(t *testing.T) {
 	err = store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
-	job, err = store.Pop(ctx, "foo.Bar")
+	job, err = store.Pop(ctx, job.Queue)
 	assert.NoError(t, err)
 
 	opt, err := redis.ParseURL(url)
@@ -389,7 +396,7 @@ func TestCloseJob_errors_onCompelete_list_invalid_type(t *testing.T) {
 	rdb := redis.NewClient(opt)
 
 	// Force an error by setting the onComplete list to the wrong type
-	err = rdb.Set(ctx, "job:"+job.Uuid+":onComplete", "oops", 0).Err()
+	err = rdb.Set(ctx, storage.OnCompleteListKey(job.Uuid), "oops", 0).Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)
@@ -413,7 +420,7 @@ func TestCloseJob_errors_onComplete_list_item_is_invalid(t *testing.T) {
 	err = store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
-	job, err = store.Pop(ctx, "foo.Bar")
+	job, err = store.Pop(ctx, job.Queue)
 	assert.NoError(t, err)
 
 	opt, err := redis.ParseURL(url)
@@ -421,7 +428,7 @@ func TestCloseJob_errors_onComplete_list_item_is_invalid(t *testing.T) {
 	rdb := redis.NewClient(opt)
 
 	// Force an setting the children's queue to the wrong type
-	err = rdb.LPush(ctx, "job:"+job.Uuid+":onComplete", "oops").Err()
+	err = rdb.LPush(ctx, storage.OnCompleteListKey(job.Uuid), "oops").Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)
@@ -445,7 +452,7 @@ func TestCloseJob_errors_onComplete_queue_is_invalid_type(t *testing.T) {
 	err = store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
-	job, err = store.Pop(ctx, "foo.Bar")
+	job, err = store.Pop(ctx, job.Queue)
 	assert.NoError(t, err)
 
 	onCompleteJob := &wire.Job{
@@ -463,7 +470,7 @@ func TestCloseJob_errors_onComplete_queue_is_invalid_type(t *testing.T) {
 	rdb := redis.NewClient(opt)
 
 	// Force an setting the children's queue to the wrong type
-	err = rdb.Set(ctx, "foo.Baz", "oops", 0).Err()
+	err = rdb.Set(ctx, storage.QueueKey(onCompleteJob.Queue), "oops", 0).Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)

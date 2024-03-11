@@ -10,7 +10,7 @@ import (
 )
 
 func (s *redisHandler) GetJob(ctx context.Context, uuid string) (*wire.Job, error) {
-	jobBytes, err := s.rdb.Get(ctx, jobKey(uuid)).Result()
+	jobBytes, err := s.rdb.Get(ctx, JobKey(uuid)).Result()
 	if err == redis.Nil {
 		return nil, nil
 	}

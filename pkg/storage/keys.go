@@ -7,30 +7,30 @@ import (
 const prefix = "conv"
 
 var (
-	activeJobsKey       = fmt.Sprintf("%s:%s", prefix, "jobs:active")
-	activeQueuesKey     = fmt.Sprintf("%s:%s", prefix, "queues:active")
-	activeWorkersKey    = fmt.Sprintf("%s:%s", prefix, "workers:active")
-	failedJobsKey       = fmt.Sprintf("%s:%s", prefix, "failed")
-	jobEventsChannelKey = fmt.Sprintf("%s:%s", prefix, "events")
-	scheduledJobsKey    = fmt.Sprintf("%s:%s", prefix, "scheduled")
+	ActiveJobsKey       = fmt.Sprintf("%s:%s", prefix, "jobs:active")
+	ActiveQueuesKey     = fmt.Sprintf("%s:%s", prefix, "queues:active")
+	ActiveWorkersKey    = fmt.Sprintf("%s:%s", prefix, "workers:active")
+	FailedJobsKey       = fmt.Sprintf("%s:%s", prefix, "failed")
+	JobEventsChannelKey = fmt.Sprintf("%s:%s", prefix, "events")
+	ScheduledJobsKey    = fmt.Sprintf("%s:%s", prefix, "scheduled")
 )
 
-func queueKey(queue string) string {
+func QueueKey(queue string) string {
 	return fmt.Sprintf("%s:queue:%s", prefix, queue)
 }
 
-func childenListKey(parentUuid string) string {
+func ChildenListKey(parentUuid string) string {
 	return fmt.Sprintf("%s:job:%s:children", prefix, parentUuid)
 }
 
-func childenSetKey(parentUuid string) string {
+func ChildenSetKey(parentUuid string) string {
 	return fmt.Sprintf("%s:job:%s:active", prefix, parentUuid)
 }
 
-func jobKey(uuid string) string {
+func JobKey(uuid string) string {
 	return fmt.Sprintf("%s:job:%s", prefix, uuid)
 }
 
-func onCompleteListKey(predecessorUuid string) string {
+func OnCompleteListKey(predecessorUuid string) string {
 	return fmt.Sprintf("%s:job:%s:onComplete", prefix, predecessorUuid)
 }

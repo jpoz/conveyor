@@ -4,6 +4,7 @@ import (
 	context "context"
 	"testing"
 
+	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
@@ -30,11 +31,11 @@ func TestAddJob(t *testing.T) {
 	assert.NotNil(t, job.Uuid) // Make sure we got a uuid
 
 	rdb := RedisClient(t, s)
-	count, err := rdb.LLen(ctx, "foo.Bar").Result()
+	count, err := rdb.LLen(ctx, storage.QueueKey(job.Queue)).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), count)
 
-	jbytes, err := rdb.LPop(ctx, "foo.Bar").Result()
+	jbytes, err := rdb.LPop(ctx, storage.QueueKey(job.Queue)).Result()
 	assert.NoError(t, err)
 	assert.NotNil(t, jbytes)
 
@@ -65,11 +66,11 @@ func TestAddJob_Child(t *testing.T) {
 	assert.NotNil(t, job.Uuid) // Make sure we got a uuid
 
 	rdb := RedisClient(t, s)
-	count, err := rdb.LLen(ctx, "job:1234-5678-9012-3456:children").Result()
+	count, err := rdb.LLen(ctx, storage.ChildenListKey(job.ParentUuid)).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), count)
 
-	jbytes, err := rdb.RPop(ctx, "job:1234-5678-9012-3456:children").Result()
+	jbytes, err := rdb.RPop(ctx, storage.ChildenListKey(job.ParentUuid)).Result()
 	assert.NoError(t, err)
 	assert.NotNil(t, jbytes)
 
@@ -100,11 +101,11 @@ func TestAddJob_OnComplete(t *testing.T) {
 	assert.NoError(t, err)
 
 	rdb := RedisClient(t, s)
-	count, err := rdb.LLen(ctx, "job:1234-5678-9012-3456:onComplete").Result()
+	count, err := rdb.LLen(ctx, storage.OnCompleteListKey(job.PredecessorUuid)).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), count)
 
-	jbytes, err := rdb.RPop(ctx, "job:1234-5678-9012-3456:onComplete").Result()
+	jbytes, err := rdb.RPop(ctx, storage.OnCompleteListKey(job.PredecessorUuid)).Result()
 	assert.NoError(t, err)
 	assert.NotNil(t, jbytes)
 

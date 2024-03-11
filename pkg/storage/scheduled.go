@@ -16,7 +16,7 @@ func (s *redisHandler) PopScheduledJobs(ctx context.Context) error {
 	ts := fmt.Sprintf("%d", t)
 	jobs, err := s.rdb.ZRangeByScore(
 		ctx,
-		scheduledJobsKey,
+		ScheduledJobsKey,
 		&redis.ZRangeBy{Min: "-inf", Max: ts},
 	).Result()
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *redisHandler) PopScheduledJobs(ctx context.Context) error {
 	}
 
 	for _, jobBytes := range jobs {
-		err := s.rdb.ZRem(ctx, scheduledJobsKey, jobBytes).Err()
+		err := s.rdb.ZRem(ctx, ScheduledJobsKey, jobBytes).Err()
 		if err != nil {
 			return err
 		}

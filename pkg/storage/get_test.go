@@ -25,13 +25,13 @@ func TestGetJob(t *testing.T) {
 	job = &wire.Job{}
 	jobBytes, err := proto.Marshal(job)
 	assert.NoError(t, err)
-	rdb.Set(ctx, "job:foo", jobBytes, 0)
+	rdb.Set(ctx, "conv:job:foo", jobBytes, 0)
 	job, err = store.GetJob(ctx, "foo")
 	assert.NoError(t, err)
 	assert.NotNil(t, job)
 
 	// if the job data is corrupted
-	rdb.Set(ctx, "job:bar", []byte("baddata"), 0)
+	rdb.Set(ctx, "conv:job:bar", []byte("baddata"), 0)
 	job, err = store.GetJob(ctx, "bar")
 	assert.Nil(t, job)
 	assert.Error(t, err)

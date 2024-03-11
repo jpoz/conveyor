@@ -24,7 +24,7 @@ func NewHandler(t *testing.T) (storage.Handler, *miniredis.Miniredis) {
 }
 
 func RedisClient(t *testing.T, s *miniredis.Miniredis) *redis.Client {
-	opt, err := redis.ParseURL(s.Addr())
+	opt, err := redis.ParseURL(fmt.Sprintf("redis://%s", s.Addr()))
 	require.NoError(t, err)
 	return redis.NewClient(opt)
 }

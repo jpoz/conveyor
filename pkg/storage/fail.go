@@ -11,7 +11,7 @@ import (
 )
 
 func (s *redisHandler) FailJob(ctx context.Context, uuid string) error {
-	str, err := s.rdb.Get(ctx, jobKey(uuid)).Result()
+	str, err := s.rdb.Get(ctx, JobKey(uuid)).Result()
 	if err != nil {
 		return err
 	}
@@ -37,18 +37,18 @@ func (s *redisHandler) FailJob(ctx context.Context, uuid string) error {
 
 	pipe := s.rdb.Pipeline()
 
-	pipe.Del(ctx, jobKey(uuid))
-	pipe.Del(ctx, onCompleteListKey(uuid))
-	pipe.Del(ctx, childenListKey(uuid))
-	pipe.SRem(ctx, activeJobsKey, uuid)
+	pipe.Del(ctx, JobKey(uuid))
+	pipe.Del(ctx, OnCompleteListKey(uuid))
+	pipe.Del(ctx, ChildenListKey(uuid))
+	pipe.SRem(ctx, ActiveJobsKey, uuid)
 
 	var result Result
 	if job.Retry >= maxRetries {
 		result = ResultFailure
-		pipe.LPush(ctx, failedJobsKey, jobBytes)
+		pipe.LPush(ctx, FailedJobsKey, jobBytes)
 	} else {
 		result = ResultError
-		pipe.ZAdd(ctx, scheduledJobsKey, redis.Z{Score: float64(retryAt.Unix()), Member: jobBytes})
+		pipe.ZAdd(ctx, ScheduledJobsKey, redis.Z{Score: float64(retryAt.Unix()), Member: jobBytes})
 	}
 
 	cmdErrs, err := pipe.Exec(ctx)

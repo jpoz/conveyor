@@ -29,7 +29,7 @@ func (s *redisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, er
 
 	queueKeys := make([]string, len(queues))
 	for i, queue := range queues {
-		queueKeys[i] = queueKey(queue)
+		queueKeys[i] = QueueKey(queue)
 	}
 
 	payload, err := s.rdb.BRPop(ctx, 2*time.Second, queueKeys...).Result()

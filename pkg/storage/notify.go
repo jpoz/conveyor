@@ -16,7 +16,7 @@ func (s *redisHandler) Notify(ctx context.Context, job *wire.Job, status wire.Jo
 		return fmt.Errorf("failed to marshal job: %v", err)
 	}
 
-	err = s.rdb.Publish(ctx, jobEventsChannelKey, bts).Err()
+	err = s.rdb.Publish(ctx, JobEventsChannelKey, bts).Err()
 	if err != nil {
 		return fmt.Errorf("failed to publish job: %v", err)
 	}
@@ -25,7 +25,7 @@ func (s *redisHandler) Notify(ctx context.Context, job *wire.Job, status wire.Jo
 }
 
 func (s *redisHandler) Subscribe(ctx context.Context, onStatusChange OnStatusChange) error {
-	pubsub := s.rdb.Subscribe(ctx, jobEventsChannelKey)
+	pubsub := s.rdb.Subscribe(ctx, JobEventsChannelKey)
 	incoming := pubsub.Channel()
 
 	for {
