@@ -1,3 +1,10 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jpoz/conveyor/main/misc/logo.png" height="250" alt="Conveyor Gopher" />
+</p>
+<p align="center">
+  <em>Chainable background job runner</em>
+</p>
+
 # Conveyor
 
 **Multi-language background job runner.**
