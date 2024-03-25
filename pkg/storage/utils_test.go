@@ -2,10 +2,10 @@ package storage_test
 
 import (
 	"fmt"
-	"log/slog"
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/jpoz/conveyor/pkg/config"
 	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
@@ -18,7 +18,10 @@ func NewMiniRedis(t *testing.T) (string, *miniredis.Miniredis) {
 
 func NewHandler(t *testing.T) (storage.Handler, *miniredis.Miniredis) {
 	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
+	cfg := config.Project{
+		RedisURL: url,
+	}
+	store, err := storage.NewRedisHandler(&cfg)
 	require.NoError(t, err)
 	return store, s
 }

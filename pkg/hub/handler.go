@@ -1,7 +1,7 @@
 package hub
 
 import (
-	"fmt"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -14,10 +14,6 @@ var upgrader = websocket.Upgrader{}
 
 func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	views.Dashboard().Render(r.Context(), w)
-}
-
-func (s *Server) JobsHandler(w http.ResponseWriter, r *http.Request) {
-	views.Jobs().Render(r.Context(), w)
 }
 
 func (s *Server) QueuesPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,12 +59,29 @@ func (s *Server) QueuePageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(jobs)
+	jobViews := make([]views.JobView, len(jobs))
+	for i, job := range jobs {
+		jobViews[i] = views.JobView{
+			Job: job,
+		}
+
+		msg, err := s.UnmarshalJob(job)
+		if err != nil {
+			if errors.Is(err, ErrUnknownType) {
+				continue
+			}
+			s.log.Error("failed to unmarshal job", slog.String("error", err.Error()))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		jobViews[i].UnmarshaledPayload = msg
+	}
 
 	view := views.QueueView{
 		Name:     queueName,
 		JobCount: count,
-		Jobs:     jobs,
+		Jobs:     jobViews,
 	}
 
 	views.Queue(view).Render(r.Context(), w)

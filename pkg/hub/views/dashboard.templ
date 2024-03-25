@@ -1,33 +1,50 @@
 package views
 
+script buildChart(id, endpoint string) {
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch(endpoint)
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById(id).getContext('2d');
+                const myChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: data.datasets
+                    },
+                    options: {
+                        plugins: {
+                          customCanvasBackgroundColor: {
+                            color: '#1c1917',
+                          }
+                        },
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                stacked: true,
+                            },
+                            y: {
+                                stacked: true
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Error loading chart data:', error));
+    });
+}
+
 templ Dashboard() {
 	@AppLayout("Dashboard", "dashboard") {
-		<div class="py-4 bg-gray-100">
-			<div>
-				<h3 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Jobs </h3>
-				<div
-					class="max-w-7xl bg-white rounded-lg shadow border border-gray-200 py-4 px-2"
-					hx-get="/jobs"
-					hx-trigger="load"
-				>
-					>
-					<div class="text-center mx-auto w-8 h-8">
-						@Spinner("w-8 h-8 text-gray-50 animate-spin fill-blue-600")
-					</div>
-				</div>
+		<div class="py-4">
+			<div class="max-h-96">
+				<canvas id="jobChart" class="w-full bg-stone-900"></canvas>
 			</div>
+			@buildChart("jobChart", "/api/counts")
 		</div>
 	}
 }
 
 templ Jobs() {
-	<div class="flex">
-		@Job()
-	</div>
-}
-
-templ Job() {
-	<div class="rounded-full px-4 py-2 bg-gray-100">
-		wire.StartJob
-	</div>
+	<div class="flex"></div>
 }

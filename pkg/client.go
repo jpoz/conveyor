@@ -5,23 +5,25 @@ import (
 	"fmt"
 	"log/slog"
 
+	"google.golang.org/protobuf/proto"
+
+	"github.com/jpoz/conveyor/pkg/config"
 	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
-	"google.golang.org/protobuf/proto"
 )
 
 type Client struct {
 	handler storage.Handler
-	log     *slog.Logger
+	cfg     config.ClientConfig
 }
 
 type Result struct {
 	Uuid string
 }
 
-func NewClient(log *slog.Logger, redisAddr string) (*Client, error) {
-	l := log.With(slog.String("client", "conveyor"))
-	handler, err := storage.NewRedisHandler(l, redisAddr)
+func NewClient(cfg config.ClientConfig) (*Client, error) {
+	cfg.SetLogger(cfg.GetLogger().With(slog.String("client", "conveyor")))
+	handler, err := storage.NewRedisHandler(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create redis handler: %w", err)
 	}
@@ -33,6 +35,7 @@ func NewClient(log *slog.Logger, redisAddr string) (*Client, error) {
 
 	return &Client{
 		handler: handler,
+		cfg:     cfg,
 	}, nil
 }
 

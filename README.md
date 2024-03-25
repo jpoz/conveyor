@@ -7,6 +7,8 @@
 
 # Conveyor
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/jpoz/conveyor)](https://goreportcard.com/report/github.com/jpoz/conveyor)
+
 **Multi-language background job runner.**
 
 Conveyor is an asyncronous job runner that can run in multiple languages. It uses protobufs to have typed communication between languages.

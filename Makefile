@@ -52,14 +52,17 @@ docker-clean: ## nuke the docker-compose and volumes
 hub: docker  ## Run hub
 	$(GOCMD) run cmd/hub/main.go
 
-.PHONY: dev_hub
-dev_hub: docker ## Run hub (rebuilt with air)
-	(cd pkg/hub && air) 
+.PHONY: dev
+dev: docker ## Run hub (rebuilt with air)
+	air
 
 .PHONY: dev_recurring_job
-dev_recurring_job: docker ## Run recurring job (for development)
+dev_recurring_job: docker templ## Run recurring job (for development)
 	go run _examples/recurring/main.go
 
+.PHONY: templ
+templ: ## Run worker (for development)
+	go run -mod=mod github.com/a-h/templ/cmd/templ generate
 
 .PHONY: dev_worker
 dev_worker: docker

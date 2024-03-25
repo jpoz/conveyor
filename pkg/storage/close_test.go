@@ -2,6 +2,7 @@ package storage_test
 
 import (
 	context "context"
+	"fmt"
 	"log/slog"
 	"testing"
 
@@ -16,9 +17,8 @@ import (
 
 func TestCloseJob(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	var err error
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -42,9 +42,8 @@ func TestCloseJob(t *testing.T) {
 
 func TestCloseJob_multiple_closes(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	var err error
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -69,9 +68,10 @@ func TestCloseJob_multiple_closes(t *testing.T) {
 
 func TestCloseJob_withChild(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	var err error
+	store, s := NewHandler(t)
+	rHandler, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -97,11 +97,11 @@ func TestCloseJob_withChild(t *testing.T) {
 	err = store.AddJob(ctx, childJob)
 	assert.NoError(t, err)
 
-	opt, err := redis.ParseURL(url)
+	opt, err := redis.ParseURL(fmt.Sprintf("redis://%s", s.Addr()))
 	require.NoError(t, err)
 	rdb := redis.NewClient(opt)
 
-	jb, err := rdb.Get(ctx, storage.JobKey(job.Uuid)).Result()
+	jb, err := rdb.Get(ctx, rHandler.JobKey(job.Uuid)).Result()
 	assert.NoError(t, err)
 	rjob := &wire.Job{}
 	err = proto.Unmarshal([]byte(jb), rjob)
@@ -129,9 +129,10 @@ func TestCloseJob_withChild(t *testing.T) {
 
 func TestCloseJob_withChildren(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	var err error
+	store, s := NewHandler(t)
+	rHandler, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -159,26 +160,26 @@ func TestCloseJob_withChildren(t *testing.T) {
 		childJobs = append(childJobs, childJob)
 	}
 
-	opt, err := redis.ParseURL(url)
+	opt, err := redis.ParseURL(fmt.Sprintf("redis://%s", s.Addr()))
 	require.NoError(t, err)
 	rdb := redis.NewClient(opt)
 
 	bool, err := store.CloseJob(ctx, job)
 	assert.NoError(t, err)
 	assert.False(t, bool) // should not close since the child is still open
-	_, err = rdb.Get(ctx, storage.JobKey(job.Uuid)).Result()
+	_, err = rdb.Get(ctx, rHandler.JobKey(job.Uuid)).Result()
 	assert.NoError(t, err)
 
 	bool, err = store.CloseJob(ctx, childJobs[0])
 	assert.NoError(t, err)
 	assert.False(t, bool) // should not close since siblings are still open
-	_, err = rdb.Get(ctx, storage.JobKey(job.Uuid)).Result()
+	_, err = rdb.Get(ctx, rHandler.JobKey(job.Uuid)).Result()
 	assert.NoError(t, err)
 
 	bool, err = store.CloseJob(ctx, childJobs[1])
 	assert.NoError(t, err)
 	assert.False(t, bool) // should not close since sibling is still open
-	_, err = rdb.Get(ctx, storage.JobKey(job.Uuid)).Result()
+	_, err = rdb.Get(ctx, rHandler.JobKey(job.Uuid)).Result()
 	assert.NoError(t, err)
 
 	bool, err = store.CloseJob(ctx, childJobs[2])

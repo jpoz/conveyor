@@ -10,11 +10,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func (s *redisHandler) AddJob(ctx context.Context, job *wire.Job) error {
+func (s *RedisHandler) AddJob(ctx context.Context, job *wire.Job) error {
 	return s.add(ctx, job, false)
 }
 
-func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) error {
+func (s *RedisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) error {
 	if job == nil {
 		return ErrNoJob
 	}
@@ -30,14 +30,14 @@ func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) 
 
 	if job.ParentUuid != "" && !deadParent {
 		// Parent is still running, add to children list
-		err = s.rdb.LPush(ctx, ChildenListKey(job.ParentUuid), jobBytes).Err()
+		err = s.rdb.LPush(ctx, s.ChildenListKey(job.ParentUuid), jobBytes).Err()
 		if err != nil {
 			return fmt.Errorf("%w add failed to add to children list: %v", ErrFatalError, err)
 		}
 		return nil
 	} else if job.PredecessorUuid != "" && !deadParent {
 		// Parent is still running, add to onComplete list
-		err = s.rdb.LPush(ctx, OnCompleteListKey(job.PredecessorUuid), jobBytes).Err()
+		err = s.rdb.LPush(ctx, s.OnCompleteListKey(job.PredecessorUuid), jobBytes).Err()
 		if err != nil {
 			return err
 		}
@@ -46,7 +46,7 @@ func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) 
 		if job.RunAt.AsTime().After(time.Now()) {
 			return s.rdb.ZAdd(
 				ctx,
-				ScheduledJobsKey,
+				s.ScheduledJobsKey(),
 				redis.Z{
 					Score:  float64(job.RunAt.AsTime().Unix()),
 					Member: jobBytes,
@@ -58,13 +58,13 @@ func (s *redisHandler) add(ctx context.Context, job *wire.Job, deadParent bool) 
 	if job.ParentUuid != "" {
 		// Parent is dead, add to children set to keep track of which
 		// children are still running
-		err = s.rdb.SAdd(ctx, ChildenSetKey(job.ParentUuid), job.Uuid).Err()
+		err = s.rdb.SAdd(ctx, s.ChildenSetKey(job.ParentUuid), job.Uuid).Err()
 		if err != nil {
 			return err
 		}
 	}
 
-	key := QueueKey(job.Queue)
+	key := s.QueueKey(job.Queue)
 	err = s.rdb.LPush(ctx, key, jobBytes).Err()
 	if err != nil {
 		return fmt.Errorf("%w failed to add to job to queue: %v", ErrFatalError, err)

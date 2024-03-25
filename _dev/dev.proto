@@ -1,0 +1,24 @@
+syntax = "proto3";
+package main;
+
+option go_package = "github.com/jpoz/conveyor/_dev/main";
+
+message Start {
+  int32 spawn = 1;
+  int32 levels = 2;
+  string message = 3;
+}
+
+message Child {
+  int32 level = 1;
+  int32 count = 2;
+  int32 spawn = 3;
+  int32 levels = 4;
+  string message = 5;
+}
+
+message Last {
+  int32 level = 1;
+  int32 count = 2;
+  string message = 3;
+}
