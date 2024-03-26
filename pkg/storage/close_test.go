@@ -3,7 +3,6 @@ package storage_test
 import (
 	context "context"
 	"fmt"
-	"log/slog"
 	"testing"
 
 	"github.com/google/uuid"
@@ -189,9 +188,7 @@ func TestCloseJob_withChildren(t *testing.T) {
 
 func TestCloseJob_withOnComplete(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -200,7 +197,7 @@ func TestCloseJob_withOnComplete(t *testing.T) {
 		Payload: []byte("bar"),
 	}
 
-	err = store.AddJob(ctx, job)
+	err := store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
 	job, err = store.Pop(ctx, job.Queue)
@@ -236,10 +233,7 @@ func TestCloseJob_withOnComplete(t *testing.T) {
 
 func TestCloseJob_errors_invalid_children_list(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
-
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -248,19 +242,21 @@ func TestCloseJob_errors_invalid_children_list(t *testing.T) {
 		Payload: []byte("bar"),
 	}
 
-	err = store.AddJob(ctx, job)
+	err := store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
 	job, err = store.Pop(ctx, "foo.Bar")
 	assert.NoError(t, err)
 
-	opt, err := redis.ParseURL(url)
+	opt, err := redis.ParseURL(fmt.Sprintf("redis://%s", s.Addr()))
 	require.NoError(t, err)
 	rdb := redis.NewClient(opt)
+	rstore, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
 
 	// Force an error by setting the children to a wrong type
-	rdb.Del(ctx, storage.ChildenListKey(job.Uuid))
-	rdb.Set(ctx, storage.ChildenListKey(job.Uuid), "wrongType", 0)
+	rdb.Del(ctx, rstore.ChildenListKey(job.Uuid))
+	rdb.Set(ctx, rstore.ChildenListKey(job.Uuid), "wrongType", 0)
 
 	bool, err := store.CloseJob(ctx, job)
 	assert.ErrorIs(t, err, storage.ErrFatalError)
@@ -269,9 +265,7 @@ func TestCloseJob_errors_invalid_children_list(t *testing.T) {
 
 func TestCloseJob_errors_invalid_child_payload(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -280,18 +274,20 @@ func TestCloseJob_errors_invalid_child_payload(t *testing.T) {
 		Payload: []byte("bar"),
 	}
 
-	err = store.AddJob(ctx, job)
+	err := store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
 	job, err = store.Pop(ctx, "foo.Bar")
 	assert.NoError(t, err)
 
-	opt, err := redis.ParseURL(url)
+	opt, err := redis.ParseURL(fmt.Sprintf("redis://%s", s.Addr()))
 	require.NoError(t, err)
 	rdb := redis.NewClient(opt)
+	rstore, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
 
 	// Force an error by setting a child as an invalid wire.Job
-	err = rdb.LPush(ctx, storage.ChildenListKey(job.Uuid), "invalidPayload").Err()
+	err = rdb.LPush(ctx, rstore.ChildenListKey(job.Uuid), "invalidPayload").Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)
@@ -301,9 +297,7 @@ func TestCloseJob_errors_invalid_child_payload(t *testing.T) {
 
 func TestCloseJob_errors_child_queue_is_invalid_type(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -312,7 +306,7 @@ func TestCloseJob_errors_child_queue_is_invalid_type(t *testing.T) {
 		Payload: []byte("bar"),
 	}
 
-	err = store.AddJob(ctx, job)
+	err := store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
 	job, err = store.Pop(ctx, "foo.Bar")
@@ -328,12 +322,14 @@ func TestCloseJob_errors_child_queue_is_invalid_type(t *testing.T) {
 	err = store.AddJob(ctx, childJob)
 	assert.NoError(t, err)
 
-	opt, err := redis.ParseURL(url)
+	opt, err := redis.ParseURL(fmt.Sprintf("redis://%s", s.Addr()))
 	require.NoError(t, err)
 	rdb := redis.NewClient(opt)
+	rstore, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
 
 	// Force an setting the children's queue to the wrong type
-	err = rdb.Set(ctx, storage.QueueKey(childJob.Queue), "oops", 0).Err()
+	err = rdb.Set(ctx, rstore.QueueKey(childJob.Queue), "oops", 0).Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)
@@ -343,9 +339,7 @@ func TestCloseJob_errors_child_queue_is_invalid_type(t *testing.T) {
 
 func TestCloseJob_errors_children_set_invalid_type(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -354,18 +348,20 @@ func TestCloseJob_errors_children_set_invalid_type(t *testing.T) {
 		Payload: []byte("bar"),
 	}
 
-	err = store.AddJob(ctx, job)
+	err := store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
 	job, err = store.Pop(ctx, "foo.Bar")
 	assert.NoError(t, err)
 
-	opt, err := redis.ParseURL(url)
+	opt, err := redis.ParseURL(fmt.Sprintf("redis://%s", s.Addr()))
 	require.NoError(t, err)
 	rdb := redis.NewClient(opt)
+	rstore, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
 
 	// Force an error by setting the active children set to the wrong type
-	err = rdb.Set(ctx, storage.ChildenSetKey(job.Uuid), "oops", 0).Err()
+	err = rdb.Set(ctx, rstore.ChildenSetKey(job.Uuid), "oops", 0).Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)
@@ -375,9 +371,7 @@ func TestCloseJob_errors_children_set_invalid_type(t *testing.T) {
 
 func TestCloseJob_errors_onCompelete_list_invalid_type(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -386,18 +380,20 @@ func TestCloseJob_errors_onCompelete_list_invalid_type(t *testing.T) {
 		Payload: []byte("bar"),
 	}
 
-	err = store.AddJob(ctx, job)
+	err := store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
 	job, err = store.Pop(ctx, job.Queue)
 	assert.NoError(t, err)
 
-	opt, err := redis.ParseURL(url)
+	opt, err := redis.ParseURL(fmt.Sprintf("redis://%s", s.Addr()))
 	require.NoError(t, err)
 	rdb := redis.NewClient(opt)
+	rstore, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
 
 	// Force an error by setting the onComplete list to the wrong type
-	err = rdb.Set(ctx, storage.OnCompleteListKey(job.Uuid), "oops", 0).Err()
+	err = rdb.Set(ctx, rstore.OnCompleteListKey(job.Uuid), "oops", 0).Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)
@@ -407,9 +403,7 @@ func TestCloseJob_errors_onCompelete_list_invalid_type(t *testing.T) {
 
 func TestCloseJob_errors_onComplete_list_item_is_invalid(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -418,18 +412,20 @@ func TestCloseJob_errors_onComplete_list_item_is_invalid(t *testing.T) {
 		Payload: []byte("bar"),
 	}
 
-	err = store.AddJob(ctx, job)
+	err := store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
 	job, err = store.Pop(ctx, job.Queue)
 	assert.NoError(t, err)
 
-	opt, err := redis.ParseURL(url)
+	opt, err := redis.ParseURL(fmt.Sprintf("redis://%s", s.Addr()))
 	require.NoError(t, err)
 	rdb := redis.NewClient(opt)
+	rstore, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
 
 	// Force an setting the children's queue to the wrong type
-	err = rdb.LPush(ctx, storage.OnCompleteListKey(job.Uuid), "oops").Err()
+	err = rdb.LPush(ctx, rstore.OnCompleteListKey(job.Uuid), "oops").Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)
@@ -439,9 +435,7 @@ func TestCloseJob_errors_onComplete_list_item_is_invalid(t *testing.T) {
 
 func TestCloseJob_errors_onComplete_queue_is_invalid_type(t *testing.T) {
 	ctx := context.Background()
-	url, s := NewMiniRedis(t)
-	store, err := storage.NewRedisHandler(slog.Default(), url)
-	require.NoError(t, err)
+	store, s := NewHandler(t)
 	defer s.Close()
 
 	job := &wire.Job{
@@ -450,7 +444,7 @@ func TestCloseJob_errors_onComplete_queue_is_invalid_type(t *testing.T) {
 		Payload: []byte("bar"),
 	}
 
-	err = store.AddJob(ctx, job)
+	err := store.AddJob(ctx, job)
 	assert.NoError(t, err)
 
 	job, err = store.Pop(ctx, job.Queue)
@@ -466,12 +460,14 @@ func TestCloseJob_errors_onComplete_queue_is_invalid_type(t *testing.T) {
 	err = store.AddJob(ctx, onCompleteJob)
 	assert.NoError(t, err)
 
-	opt, err := redis.ParseURL(url)
+	opt, err := redis.ParseURL(fmt.Sprintf("redis://%s", s.Addr()))
 	require.NoError(t, err)
 	rdb := redis.NewClient(opt)
+	rstore, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
 
 	// Force an setting the children's queue to the wrong type
-	err = rdb.Set(ctx, storage.QueueKey(onCompleteJob.Queue), "oops", 0).Err()
+	err = rdb.Set(ctx, rstore.QueueKey(onCompleteJob.Queue), "oops", 0).Err()
 	assert.NoError(t, err)
 
 	bool, err := store.CloseJob(ctx, job)

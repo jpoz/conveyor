@@ -125,7 +125,6 @@ func (s *Server) MuxRecover(next http.Handler) http.Handler {
 			if err := recover(); err != nil {
 				stack := debug.Stack()
 				s.log.Error("panic", slog.String("error", fmt.Sprintf("%v", err)), slog.String("stack", string(stack)))
-				// Show the stacktrace
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			}
 		}()
