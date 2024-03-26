@@ -98,6 +98,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	_, err = client.Enqueue(ctx, &Start{
+		Spawn:   3,
+		Levels:  3,
+		Message: "Hello, World!",
+	}, conveyor.Delay(10*60*time.Second))
+	if err != nil {
+		log.Error("failed to enqueue job", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 

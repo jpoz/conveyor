@@ -80,9 +80,6 @@ templ Queue(queue QueueView) {
 					Queue { queue.Name }
 				</h3>
 				<div>
-					<button class="text-sm text-gray-300 bg-blue-500 px-2 py-1 rounded-md">
-						Select All
-					</button>
 					<div class="flex flex-col divide-y divide-gray-700">
 						for _, item := range queue.Jobs {
 							@qJob(queue, item)
@@ -99,12 +96,6 @@ templ qJob(queue QueueView, item JobView) {
 		id={ "qJob" + item.Job.Uuid }
 		class="p-3 flex justify-between items-center hover:bg-gray-800"
 	>
-		<div class="w-4 text-sm font-medium text-gray-300">
-			<input
-				type="checkbox"
-				class="form-checkbox h-4 w-4 text-blue-600"
-			/>
-		</div>
 		<div class="text-sm font-mono font-medium text-gray-300 text-left pl-3">
 			{ item.Job.Uuid[0:8] }
 		</div>

@@ -16,7 +16,9 @@ type Stats interface {
 	ActiveQueueCount(ctx context.Context) (int64, error)
 	PruneActiveQueues(ctx context.Context) error
 	CountQueueJobs(ctx context.Context, queue string) (int64, error)
+	CountScheduledJobs(ctx context.Context) (int64, error)
 	ListQueueJobs(ctx context.Context, queue string, start, stop int64) ([]*wire.Job, error)
+	ListScheduledJobs(ctx context.Context, start, stop int64) ([]*wire.Job, error)
 
 	// Jobs
 	ActiveJobCount(ctx context.Context) (int64, error)
@@ -67,8 +69,34 @@ func (s *RedisHandler) CountQueueJobs(ctx context.Context, queue string) (int64,
 	return s.rdb.LLen(ctx, s.QueueKey(queue)).Result()
 }
 
+func (s *RedisHandler) CountScheduledJobs(ctx context.Context) (int64, error) {
+	return s.rdb.ZCard(ctx, s.ScheduledJobsKey()).Result()
+}
+
 func (s *RedisHandler) ListQueueJobs(ctx context.Context, queue string, start, stop int64) ([]*wire.Job, error) {
-	jobBts, err := s.rdb.LRange(ctx, s.QueueKey(queue), start, stop).Result()
+	return s.listJobs(ctx, s.QueueKey(queue), start, stop)
+}
+
+func (s *RedisHandler) ListScheduledJobs(ctx context.Context, start, stop int64) ([]*wire.Job, error) {
+	elements, err := s.rdb.ZRange(ctx, s.ScheduledJobsKey(), start, stop).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	jobs := make([]*wire.Job, len(elements))
+	for i, bts := range elements {
+		jobs[i] = &wire.Job{}
+		err = proto.Unmarshal([]byte(bts), jobs[i])
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal job: %v", err)
+		}
+	}
+
+	return jobs, nil
+}
+
+func (s *RedisHandler) listJobs(ctx context.Context, key string, start, stop int64) ([]*wire.Job, error) {
+	jobBts, err := s.rdb.LRange(ctx, key, start, stop).Result()
 	if err != nil {
 		return nil, err
 	}

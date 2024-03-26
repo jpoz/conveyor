@@ -141,6 +141,7 @@ func (s *Server) Mux() http.Handler {
 	mux.HandleFunc("GET /jobs", s.JobsHandler)
 	mux.HandleFunc("GET /queues", s.QueuesPageHandler)
 	mux.HandleFunc("GET /queues/{queueName}", s.QueuePageHandler)
+	mux.HandleFunc("GET /queues/scheduled", s.ScheduledPageHandler)
 	mux.HandleFunc("GET /queues/{queueName}/jobs/{jobUuid}", s.JobPageHandler)
 	mux.HandleFunc("DELETE /jobs", s.DeleteJobsHandler)
 

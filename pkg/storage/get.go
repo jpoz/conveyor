@@ -14,7 +14,6 @@ func (s *RedisHandler) GetActiveJob(ctx context.Context, uuid string) (*wire.Job
 	if err != nil && err != redis.Nil {
 		return nil, fmt.Errorf("failed to get job from redis: %v", err)
 	}
-	fmt.Println("jobBytes", jobBytes)
 
 	if jobBytes == "" {
 		return nil, nil
