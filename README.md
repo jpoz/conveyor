@@ -19,6 +19,12 @@ Conveyor can manage multiple layers of chained jobs, streamlining the execution 
 
 All jobs are fully typed using protobuf. Allowing structured data that can evolve with your application. Since protobuf is language-neutral it also allows the possibility for other languages to start jobs and other languages to be conveyor workers.
 
+## Requirements
+
+- [Go >= 1.22](https://golang.org)
+- [Protobuf](https://developers.google.com/protocol-buffers)
+- [Redis](https://redis.io)
+
 ## Example
 
 #### Producer
