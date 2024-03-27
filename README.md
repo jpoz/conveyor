@@ -63,7 +63,7 @@ func main() {
 
 #### Worker
 
-Run [basic.RunBasicJob](_examples/basic/work.go) when a `basic.BasicJob` is received.
+Run [`basic.RunBasicJob`](_examples/basic/work.go) when a [`basic.BasicJob`](/_examples/basic/jobtypes.pb.go#L23-L30) is received.
 
 ```go
 package main
