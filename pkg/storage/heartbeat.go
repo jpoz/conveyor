@@ -4,6 +4,6 @@ import (
 	"context"
 )
 
-func (s *redisHandler) Heartbeat(ctx context.Context, workerId string) error {
+func (s *RedisHandler) Heartbeat(ctx context.Context, workerId string) error {
 	return s.workerCheckIn(ctx, workerId)
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jpoz/conveyor/pkg/config"
 	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
 	"github.com/sirupsen/logrus"
@@ -30,6 +31,7 @@ type registeredJob struct {
 type Worker struct {
 	ID string
 
+	cfg     config.WorkerConfig
 	handler storage.Handler
 	log     *slog.Logger
 	client  *Client
@@ -41,9 +43,11 @@ type Worker struct {
 
 type WorkerMiddleware func(ctx context.Context, job *wire.Job) error
 
-func NewWorker(log *slog.Logger, redisAddr string) (*Worker, error) {
-	wlog := log.With(slog.String("worker", uuid.New().String()))
-	handler, err := storage.NewRedisHandler(wlog, redisAddr)
+func NewWorker(cfg config.WorkerConfig) (*Worker, error) {
+	baseLog := cfg.GetLogger()
+	wlog := baseLog.With(slog.String("worker", uuid.New().String()))
+	cfg.SetLogger(wlog)
+	handler, err := storage.NewRedisHandler(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create redis handler: %w", err)
 	}
@@ -53,13 +57,14 @@ func NewWorker(log *slog.Logger, redisAddr string) (*Worker, error) {
 		return nil, fmt.Errorf("failed to ping redis: %w", err)
 	}
 
-	client, err := NewClient(log, redisAddr)
+	client, err := NewClient(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
 
 	return &Worker{
 		ID:                  uuid.New().String(),
+		cfg:                 cfg,
 		handler:             handler,
 		client:              client,
 		log:                 wlog,
@@ -228,7 +233,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 
 	go w.Heartbeat(ctx)
-	go w.Periodic(ctx, 30*time.Second, w.handler.PruneActiveQueues)
+	go w.Periodic(ctx, 24*time.Hour, w.handler.PruneActiveQueues)
 	go w.Periodic(ctx, 30*time.Second, w.handler.PruneActiveWorkers)
 	go w.Periodic(ctx, 1*time.Second, w.handler.PopScheduledJobs)
 

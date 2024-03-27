@@ -2,8 +2,11 @@ package storage_test
 
 import (
 	context "context"
+	"fmt"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
@@ -11,28 +14,36 @@ import (
 
 func TestGetJob(t *testing.T) {
 	ctx := context.Background()
-	store, s := NewHandler(t)
+	istore, s := NewHandler(t)
 	defer s.Close()
+	store := istore.(*storage.RedisHandler)
+	jobid := uuid.New().String()
 
 	// if the job is missing
-	job, err := store.GetJob(ctx, "foo")
+	job, err := store.GetActiveJob(ctx, jobid)
 	assert.NoError(t, err)
 	assert.Nil(t, job)
 
 	rdb := RedisClient(t, s)
 
 	// if the job is present
-	job = &wire.Job{}
+	job = &wire.Job{
+		Type:    "foo.Bar",
+		Queue:   "foo.Bar",
+		Payload: []byte("bar"),
+		Uuid:    jobid,
+	}
 	jobBytes, err := proto.Marshal(job)
 	assert.NoError(t, err)
-	rdb.Set(ctx, "conv:job:foo", jobBytes, 0)
-	job, err = store.GetJob(ctx, "foo")
+	fmt.Println("jobBytes", jobBytes)
+	rdb.Set(ctx, store.JobKey(jobid), jobBytes, 0)
+	job, err = store.GetActiveJob(ctx, jobid)
 	assert.NoError(t, err)
 	assert.NotNil(t, job)
 
 	// if the job data is corrupted
-	rdb.Set(ctx, "conv:job:bar", []byte("baddata"), 0)
-	job, err = store.GetJob(ctx, "bar")
+	rdb.Set(ctx, store.JobKey(jobid), []byte("baddata"), 0)
+	job, err = store.GetActiveJob(ctx, jobid)
 	assert.Nil(t, job)
 	assert.Error(t, err)
 }

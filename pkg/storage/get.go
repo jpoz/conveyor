@@ -9,13 +9,14 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *redisHandler) GetJob(ctx context.Context, uuid string) (*wire.Job, error) {
-	jobBytes, err := s.rdb.Get(ctx, JobKey(uuid)).Result()
-	if err == redis.Nil {
-		return nil, nil
-	}
-	if err != nil {
+func (s *RedisHandler) GetActiveJob(ctx context.Context, uuid string) (*wire.Job, error) {
+	jobBytes, err := s.rdb.Get(ctx, s.JobKey(uuid)).Result()
+	if err != nil && err != redis.Nil {
 		return nil, fmt.Errorf("failed to get job from redis: %v", err)
+	}
+
+	if jobBytes == "" {
+		return nil, nil
 	}
 
 	job := &wire.Job{}

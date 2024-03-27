@@ -7,7 +7,7 @@ const (
 
 templ AppLayout(title, current string) {
 	<!DOCTYPE html>
-	<html class="h-full bg-gray-100" lang="en">
+	<html class="h-full bg-stone-900" lang="en">
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -16,22 +16,24 @@ templ AppLayout(title, current string) {
 			<script src="/static/htmx.min.js" defer></script>
 			<script src="/static/sse.js" defer></script>
 			<script src="/js/main.js" defer></script>
+			<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+			<link rel="icon" href="/static/favicon.png" type="image/x-icon"/>
 		</head>
 		<body class="h-full">
 			<div class="min-h-full">
-				<nav class="bg-gray-800">
+				<nav>
 					<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 						<div class="flex h-16 items-center justify-between">
 							<div class="flex items-center">
 								<div class="flex-shrink-0">
-									<img class="h-8 w-8" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=500" alt="Conveyor"/>
+									<img class="h-8 w-8" src="/static/favicon.png" alt="Conveyor"/>
 								</div>
 								@nav(current)
 							</div>
 						</div>
 					</div>
 				</nav>
-				<main>
+				<main class="bg-stone-900">
 					<div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
 						{ children... }
 					</div>
@@ -44,7 +46,9 @@ templ AppLayout(title, current string) {
 templ nav(current string) {
 	<nav class="flex space-x-4 ml-4" aria-label="Tabs">
 		<a class={ tabStyle(current, "dashboard") } href={ templ.SafeURL("/") }>Dashboard</a>
-		<a class={ tabStyle(current, "stream") } href={ templ.SafeURL("/stream") }>Stream</a>
+		<div class="hidden">
+			<a class={ tabStyle(current, "stream") } href={ templ.SafeURL("/stream") }>Stream</a>
+		</div>
 		<a class={ tabStyle(current, "queues") } href={ templ.SafeURL("/queues") }>Queues</a>
 	</nav>
 }

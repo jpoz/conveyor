@@ -22,7 +22,7 @@ const configJSON = `{
 // "MinifySyntax": true
 
 var JSHandler = goes.ESHandler(
-	"",
+	"pkg/hub",
 	goes.MustParseConfig(configJSON),
 	dist,
 )

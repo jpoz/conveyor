@@ -16,7 +16,9 @@ type Stats interface {
 	ActiveQueueCount(ctx context.Context) (int64, error)
 	PruneActiveQueues(ctx context.Context) error
 	CountQueueJobs(ctx context.Context, queue string) (int64, error)
+	CountScheduledJobs(ctx context.Context) (int64, error)
 	ListQueueJobs(ctx context.Context, queue string, start, stop int64) ([]*wire.Job, error)
+	ListScheduledJobs(ctx context.Context, start, stop int64) ([]*wire.Job, error)
 
 	// Jobs
 	ActiveJobCount(ctx context.Context) (int64, error)
@@ -47,28 +49,54 @@ func (r Result) String() string {
 	return ""
 }
 
-func (s *redisHandler) ActiveJobCount(ctx context.Context) (int64, error) {
-	return s.rdb.SCard(ctx, ActiveJobsKey).Result()
+func (s *RedisHandler) ActiveJobCount(ctx context.Context) (int64, error) {
+	return s.rdb.SCard(ctx, s.ActiveJobsKey()).Result()
 }
 
-func (s *redisHandler) ActiveQueueCount(ctx context.Context) (int64, error) {
-	return s.rdb.ZCard(ctx, ActiveQueuesKey).Result()
+func (s *RedisHandler) ActiveQueueCount(ctx context.Context) (int64, error) {
+	return s.rdb.ZCard(ctx, s.ActiveQueuesKey()).Result()
 }
 
-func (s *redisHandler) ActiveQueues(ctx context.Context) ([]string, error) {
-	result, err := s.rdb.ZRange(ctx, ActiveQueuesKey, 0, -1).Result()
+func (s *RedisHandler) ActiveQueues(ctx context.Context) ([]string, error) {
+	result, err := s.rdb.ZRange(ctx, s.ActiveQueuesKey(), 0, -1).Result()
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func (s *redisHandler) CountQueueJobs(ctx context.Context, queue string) (int64, error) {
-	return s.rdb.LLen(ctx, QueueKey(queue)).Result()
+func (s *RedisHandler) CountQueueJobs(ctx context.Context, queue string) (int64, error) {
+	return s.rdb.LLen(ctx, s.QueueKey(queue)).Result()
 }
 
-func (s *redisHandler) ListQueueJobs(ctx context.Context, queue string, start, stop int64) ([]*wire.Job, error) {
-	jobBts, err := s.rdb.LRange(ctx, QueueKey(queue), start, stop).Result()
+func (s *RedisHandler) CountScheduledJobs(ctx context.Context) (int64, error) {
+	return s.rdb.ZCard(ctx, s.ScheduledJobsKey()).Result()
+}
+
+func (s *RedisHandler) ListQueueJobs(ctx context.Context, queue string, start, stop int64) ([]*wire.Job, error) {
+	return s.listJobs(ctx, s.QueueKey(queue), start, stop)
+}
+
+func (s *RedisHandler) ListScheduledJobs(ctx context.Context, start, stop int64) ([]*wire.Job, error) {
+	elements, err := s.rdb.ZRange(ctx, s.ScheduledJobsKey(), start, stop).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	jobs := make([]*wire.Job, len(elements))
+	for i, bts := range elements {
+		jobs[i] = &wire.Job{}
+		err = proto.Unmarshal([]byte(bts), jobs[i])
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal job: %v", err)
+		}
+	}
+
+	return jobs, nil
+}
+
+func (s *RedisHandler) listJobs(ctx context.Context, key string, start, stop int64) ([]*wire.Job, error) {
+	jobBts, err := s.rdb.LRange(ctx, key, start, stop).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -85,12 +113,12 @@ func (s *redisHandler) ListQueueJobs(ctx context.Context, queue string, start, s
 	return jobs, nil
 }
 
-func (s *redisHandler) ActiveWorkerCount(ctx context.Context) (int64, error) {
-	return s.rdb.ZCard(ctx, ActiveWorkersKey).Result()
+func (s *RedisHandler) ActiveWorkerCount(ctx context.Context) (int64, error) {
+	return s.rdb.ZCard(ctx, s.ActiveWorkersKey()).Result()
 }
 
-func (s *redisHandler) HistoricalJobCount(ctx context.Context, t time.Time, result Result) (int64, error) {
-	key := fmt.Sprintf("%s:%s", result.String(), t.Format("2006-01-02_15:04"))
+func (s *RedisHandler) HistoricalJobCount(ctx context.Context, t time.Time, result Result) (int64, error) {
+	key := s.HistoricalResultKey(t, result)
 
 	val, err := s.rdb.Get(ctx, key).Int64()
 	if err == redis.Nil {
@@ -104,26 +132,26 @@ func (s *redisHandler) HistoricalJobCount(ctx context.Context, t time.Time, resu
 }
 
 // PruneActiveQueues will remove queues that haven't pinned a job in the last 30 seconds
-func (s *redisHandler) PruneActiveQueues(ctx context.Context) error {
+func (s *RedisHandler) PruneActiveQueues(ctx context.Context) error {
 	s.log.Debug("Pruning active queues")
-	err := s.rdb.ZRemRangeByScore(ctx, ActiveQueuesKey, "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
+	err := s.rdb.ZRemRangeByScore(ctx, s.ActiveQueuesKey(), "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
 	if err != nil {
 		return fmt.Errorf("could not prune active queues: %w", err)
 	}
 	return nil
 }
 
-func (s *redisHandler) PruneActiveWorkers(ctx context.Context) error {
+func (s *RedisHandler) PruneActiveWorkers(ctx context.Context) error {
 	s.log.Debug("Pruning active workers")
-	err := s.rdb.ZRemRangeByScore(ctx, ActiveWorkersKey, "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
+	err := s.rdb.ZRemRangeByScore(ctx, s.ActiveWorkersKey(), "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
 	if err != nil {
 		return fmt.Errorf("could not prune active queues: %w", err)
 	}
 	return nil
 }
 
-func (s *redisHandler) addActiveJob(ctx context.Context, job *wire.Job) error {
-	err := s.rdb.SAdd(ctx, ActiveJobsKey, job.Uuid).Err()
+func (s *RedisHandler) addActiveJob(ctx context.Context, job *wire.Job) error {
+	err := s.rdb.SAdd(ctx, s.ActiveJobsKey(), job.Uuid).Err()
 	if err != nil {
 		return err
 	}
@@ -131,8 +159,8 @@ func (s *redisHandler) addActiveJob(ctx context.Context, job *wire.Job) error {
 	return nil
 }
 
-func (s *redisHandler) queueCheckIn(ctx context.Context, queue string) error {
-	err := s.rdb.ZAdd(ctx, ActiveQueuesKey, redis.Z{
+func (s *RedisHandler) queueCheckIn(ctx context.Context, queue string) error {
+	err := s.rdb.ZAdd(ctx, s.ActiveQueuesKey(), redis.Z{
 		Score:  float64(time.Now().Unix()),
 		Member: queue,
 	}).Err()
@@ -143,8 +171,8 @@ func (s *redisHandler) queueCheckIn(ctx context.Context, queue string) error {
 	return nil
 }
 
-func (s *redisHandler) workerCheckIn(ctx context.Context, workerID string) error {
-	err := s.rdb.ZAdd(ctx, ActiveWorkersKey, redis.Z{
+func (s *RedisHandler) workerCheckIn(ctx context.Context, workerID string) error {
+	err := s.rdb.ZAdd(ctx, s.ActiveWorkersKey(), redis.Z{
 		Score:  float64(time.Now().Unix()),
 		Member: workerID,
 	}).Err()
@@ -155,8 +183,8 @@ func (s *redisHandler) workerCheckIn(ctx context.Context, workerID string) error
 	return nil
 }
 
-func (s *redisHandler) removeActiveJob(ctx context.Context, job *wire.Job, result Result) error {
-	err := s.rdb.SRem(ctx, ActiveJobsKey, job.Uuid).Err()
+func (s *RedisHandler) removeActiveJob(ctx context.Context, job *wire.Job, result Result) error {
+	err := s.rdb.SRem(ctx, s.ActiveJobsKey(), job.Uuid).Err()
 	if err != nil {
 		return err
 	}
@@ -169,8 +197,8 @@ func (s *redisHandler) removeActiveJob(ctx context.Context, job *wire.Job, resul
 	return nil
 }
 
-func (s *redisHandler) incrResult(ctx context.Context, result Result) error {
-	key := fmt.Sprintf("%s:%s", result.String(), time.Now().Format("2006-01-02_15:04"))
+func (s *RedisHandler) incrResult(ctx context.Context, result Result) error {
+	key := s.HistoricalResultKey(time.Now(), result)
 
 	err := s.rdb.Incr(ctx, key).Err()
 	if err != nil {

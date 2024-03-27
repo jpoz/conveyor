@@ -10,8 +10,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *redisHandler) FailJob(ctx context.Context, uuid string) error {
-	str, err := s.rdb.Get(ctx, JobKey(uuid)).Result()
+func (s *RedisHandler) FailJob(ctx context.Context, uuid string) error {
+	str, err := s.rdb.Get(ctx, s.JobKey(uuid)).Result()
 	if err != nil {
 		return err
 	}
@@ -37,18 +37,18 @@ func (s *redisHandler) FailJob(ctx context.Context, uuid string) error {
 
 	pipe := s.rdb.Pipeline()
 
-	pipe.Del(ctx, JobKey(uuid))
-	pipe.Del(ctx, OnCompleteListKey(uuid))
-	pipe.Del(ctx, ChildenListKey(uuid))
-	pipe.SRem(ctx, ActiveJobsKey, uuid)
+	pipe.Del(ctx, s.JobKey(uuid))
+	pipe.Del(ctx, s.OnCompleteListKey(uuid))
+	pipe.Del(ctx, s.ChildenListKey(uuid))
+	pipe.SRem(ctx, s.ActiveJobsKey(), uuid)
 
 	var result Result
 	if job.Retry >= maxRetries {
 		result = ResultFailure
-		pipe.LPush(ctx, FailedJobsKey, jobBytes)
+		pipe.LPush(ctx, s.FailedJobsKey(), jobBytes)
 	} else {
 		result = ResultError
-		pipe.ZAdd(ctx, ScheduledJobsKey, redis.Z{Score: float64(retryAt.Unix()), Member: jobBytes})
+		pipe.ZAdd(ctx, s.ScheduledJobsKey(), redis.Z{Score: float64(retryAt.Unix()), Member: jobBytes})
 	}
 
 	cmdErrs, err := pipe.Exec(ctx)

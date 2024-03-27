@@ -5,20 +5,24 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/jpoz/conveyor/wire"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/jpoz/conveyor/pkg/config"
+	"github.com/jpoz/conveyor/wire"
 )
 
 const DefaultMaxRetries int32 = 3
 
-type redisHandler struct {
-	rdb *redis.Client
-	log *slog.Logger
+type RedisHandler struct {
+	Namespace string
+	rdb       *redis.Client
+	log       *slog.Logger
 }
 
-func NewRedisHandler(log *slog.Logger, redisAddr string) (Handler, error) {
-	opt, err := redis.ParseURL(redisAddr)
+func NewRedisHandler(cfg config.RedisConfig) (Handler, error) {
+	log := cfg.GetLogger()
+	opt, err := redis.ParseURL(cfg.GetRedisURL())
 	if err != nil {
 		log.Error("failed to parse redis url", slog.Any("error", err))
 		return nil, fmt.Errorf("RedisHandler failed to parse redis url: %w", err)
@@ -26,14 +30,15 @@ func NewRedisHandler(log *slog.Logger, redisAddr string) (Handler, error) {
 
 	rdb := redis.NewClient(opt)
 
-	return &redisHandler{
-		rdb: rdb,
-		log: log.With(slog.String("handler", "redis")),
+	return &RedisHandler{
+		rdb:       rdb,
+		log:       log.With(slog.String("handler", "redis")),
+		Namespace: cfg.GetNamespace(),
 	}, nil
 }
 
-func (s *redisHandler) setJob(ctx context.Context, uuid string, jobBytes []byte) error {
-	err := s.rdb.Set(ctx, JobKey(uuid), jobBytes, 0).Err()
+func (s *RedisHandler) setJob(ctx context.Context, uuid string, jobBytes []byte) error {
+	err := s.rdb.Set(ctx, s.JobKey(uuid), jobBytes, 0).Err()
 	if err != nil {
 		return err
 	}
@@ -41,11 +46,11 @@ func (s *redisHandler) setJob(ctx context.Context, uuid string, jobBytes []byte)
 	return nil
 }
 
-func (s *redisHandler) Ping(ctx context.Context) error {
+func (s *RedisHandler) Ping(ctx context.Context) error {
 	return s.rdb.Ping(ctx).Err()
 }
 
-func (s *redisHandler) Close() error {
+func (s *RedisHandler) Close() error {
 	return s.rdb.Close()
 }
 

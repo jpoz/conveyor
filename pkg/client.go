@@ -4,24 +4,28 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/jpoz/conveyor/pkg/config"
 	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
-	"google.golang.org/protobuf/proto"
 )
 
 type Client struct {
 	handler storage.Handler
-	log     *slog.Logger
+	cfg     config.ClientConfig
 }
 
 type Result struct {
 	Uuid string
 }
 
-func NewClient(log *slog.Logger, redisAddr string) (*Client, error) {
-	l := log.With(slog.String("client", "conveyor"))
-	handler, err := storage.NewRedisHandler(l, redisAddr)
+func NewClient(cfg config.ClientConfig) (*Client, error) {
+	cfg.SetLogger(cfg.GetLogger().With(slog.String("client", "conveyor")))
+	handler, err := storage.NewRedisHandler(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create redis handler: %w", err)
 	}
@@ -33,6 +37,7 @@ func NewClient(log *slog.Logger, redisAddr string) (*Client, error) {
 
 	return &Client{
 		handler: handler,
+		cfg:     cfg,
 	}, nil
 }
 
@@ -40,7 +45,24 @@ func (c *Client) Close() error {
 	return c.handler.Close()
 }
 
-func (c *Client) Enqueue(ctx context.Context, msg proto.Message) (*Result, error) {
+type JobOption func(job *wire.Job) error
+
+func Delay(delay time.Duration) JobOption {
+	return func(job *wire.Job) error {
+		runAt := time.Now().Add(delay)
+		job.RunAt = timestamppb.New(runAt)
+		return nil
+	}
+}
+
+func RunAt(t time.Time) JobOption {
+	return func(job *wire.Job) error {
+		job.RunAt = timestamppb.New(t)
+		return nil
+	}
+}
+
+func (c *Client) Enqueue(ctx context.Context, msg proto.Message, opts ...JobOption) (*Result, error) {
 	payload, err := proto.Marshal(msg)
 	if err != nil {
 		return nil, err
@@ -52,6 +74,13 @@ func (c *Client) Enqueue(ctx context.Context, msg proto.Message) (*Result, error
 		Type:    string(msgName),
 		Queue:   string(msgName),
 		Payload: payload,
+	}
+
+	for _, opt := range opts {
+		err := opt(job)
+		if err != nil {
+			return nil, fmt.Errorf("failed to apply option: %#v %w", opt, err)
+		}
 	}
 
 	return c.add(ctx, job)

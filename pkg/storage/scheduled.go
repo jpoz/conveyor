@@ -11,12 +11,12 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *redisHandler) PopScheduledJobs(ctx context.Context) error {
+func (s *RedisHandler) PopScheduledJobs(ctx context.Context) error {
 	t := time.Now().Unix()
 	ts := fmt.Sprintf("%d", t)
 	jobs, err := s.rdb.ZRangeByScore(
 		ctx,
-		ScheduledJobsKey,
+		s.ScheduledJobsKey(),
 		&redis.ZRangeBy{Min: "-inf", Max: ts},
 	).Result()
 	if err != nil {
@@ -27,7 +27,7 @@ func (s *redisHandler) PopScheduledJobs(ctx context.Context) error {
 	}
 
 	for _, jobBytes := range jobs {
-		err := s.rdb.ZRem(ctx, ScheduledJobsKey, jobBytes).Err()
+		err := s.rdb.ZRem(ctx, s.ScheduledJobsKey(), jobBytes).Err()
 		if err != nil {
 			return err
 		}

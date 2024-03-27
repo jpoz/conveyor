@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *redisHandler) Notify(ctx context.Context, job *wire.Job, status wire.JobStatus) error {
+func (s *RedisHandler) Notify(ctx context.Context, job *wire.Job, status wire.JobStatus) error {
 	job.Status = status
 
 	bts, err := proto.Marshal(job)
@@ -16,7 +16,7 @@ func (s *redisHandler) Notify(ctx context.Context, job *wire.Job, status wire.Jo
 		return fmt.Errorf("failed to marshal job: %v", err)
 	}
 
-	err = s.rdb.Publish(ctx, JobEventsChannelKey, bts).Err()
+	err = s.rdb.Publish(ctx, s.JobEventsChannelKey(), bts).Err()
 	if err != nil {
 		return fmt.Errorf("failed to publish job: %v", err)
 	}
@@ -24,8 +24,8 @@ func (s *redisHandler) Notify(ctx context.Context, job *wire.Job, status wire.Jo
 	return nil
 }
 
-func (s *redisHandler) Subscribe(ctx context.Context, onStatusChange OnStatusChange) error {
-	pubsub := s.rdb.Subscribe(ctx, JobEventsChannelKey)
+func (s *RedisHandler) Subscribe(ctx context.Context, onStatusChange OnStatusChange) error {
+	pubsub := s.rdb.Subscribe(ctx, s.JobEventsChannelKey())
 	incoming := pubsub.Channel()
 
 	for {

@@ -1,0 +1,37 @@
+package views
+
+import (
+	"fmt"
+
+	"google.golang.org/protobuf/proto"
+
+	"github.com/jpoz/conveyor/wire"
+)
+
+type JobView struct {
+	Job                *wire.Job
+	UnmarshaledPayload proto.Message
+}
+
+templ Job(view JobView) {
+	@AppLayout(fmt.Sprintf("Job %s", view.Job.Uuid), "queues") {
+		<div class="py-4">
+			<div>
+				<h3 class="text-3xl font-bold tracking-tight text-gray-200 mb-4">
+					Job { view.Job.Uuid }
+				</h3>
+				<div>
+					@InspectMessage(view.UnmarshaledPayload)
+				</div>
+			</div>
+		</div>
+	}
+}
+
+templ InspectMessage(msg proto.Message) {
+	<div class="bg-gray-800 p-4 rounded-lg">
+		<pre class="text-gray-200">
+			{ PrettyJSON(msg) }
+		</pre>
+	</div>
+}

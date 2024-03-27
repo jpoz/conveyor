@@ -1,35 +1,71 @@
 package views
 
 import (
+	"encoding/json"
 	"fmt"
+
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/jpoz/conveyor/wire"
+	"time"
 )
 
 type QueueView struct {
 	Name     string
 	JobCount int64
 
-	Jobs []*wire.Job
+	Jobs []JobView
 }
 
 script gotoQueue(queueName string) {
-	window.location.href = "/queues/" + queueName
+	window.location.href = "../queues/" + queueName
+}
+
+script gotoQueueJob(queueName, jobUuid string) {
+	window.location.href = "../queues/" + queueName + "/jobs/" + jobUuid
+}
+
+func PrettyJSON(v any) string {
+	pretty, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return err.Error()
+	}
+	return string(pretty)
+}
+
+func JobPayload(job *wire.Job) string {
+	bts, err := protojson.Marshal(job)
+	if err != nil {
+		return err.Error()
+	}
+
+	container := map[string]string{
+		"job": string(bts),
+	}
+	cbts, err := json.Marshal(container)
+	if err != nil {
+		return err.Error()
+	}
+
+	return string(cbts)
 }
 
 templ Queues(queues []QueueView) {
 	@AppLayout("Queues", "queues") {
-		<div class="py-4 bg-gray-100">
+		<div class="py-4">
 			<div>
-				<h3 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Queues </h3>
+				<h3 class="text-3xl font-bold tracking-tight text-gray-200 mb-4">
+					Queues
+				</h3>
 				<div>
-					<ul class="divide-y divide-gray-200">
+					<ul class="divide-y divide-gray-700">
 						for _, item := range queues {
 							<li
-								class="p-3 flex justify-between items-center hover:bg-gray-50"
+								class="p-3 flex justify-between items-center hover:bg-gray-800"
 								onclick={ gotoQueue(item.Name) }
 							>
-								<div class="text-sm font-medium text-gray-900">{ item.Name }</div>
-								<div class="text-sm text-gray-500">{ fmt.Sprintf("%d", item.JobCount) } jobs</div>
+								<div class="text-sm font-medium text-gray-300">{ item.Name }</div>
+								<div class="text-sm text-gray-300">{ fmt.Sprintf("%d", item.JobCount) } jobs</div>
 							</li>
 						}
 					</ul>
@@ -41,22 +77,65 @@ templ Queues(queues []QueueView) {
 
 templ Queue(queue QueueView) {
 	@AppLayout(fmt.Sprintf("Queue %s", queue.Name), "queues") {
-		<div class="py-4 bg-gray-100">
+		<div class="py-4">
 			<div>
-				<h3 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Queue { queue.Name }</h3>
+				<h3 class="text-3xl font-bold tracking-tight text-gray-200 mb-4">
+					Queue { queue.Name }
+				</h3>
 				<div>
-					<ul class="divide-y divide-gray-200">
+					<div class="flex flex-col divide-y divide-gray-700">
 						for _, item := range queue.Jobs {
-							<li
-								class="p-3 flex justify-between items-center hover:bg-gray-50"
-							>
-								<div class="text-sm font-medium text-gray-900">{ item.Uuid }</div>
-								<div class="text-sm text-gray-500">{ string(item.Payload) }</div>
-							</li>
+							@qJob(queue, item)
 						}
-					</ul>
+					</div>
 				</div>
 			</div>
 		</div>
 	}
+}
+
+templ qJob(queue QueueView, item JobView) {
+	<div
+		id={ "qJob" + item.Job.Uuid }
+		class="p-3 flex justify-between items-center hover:bg-gray-800"
+	>
+		<div class="text-sm font-mono font-medium text-gray-300 text-left pl-3">
+			{ item.Job.Uuid[0:8] }
+		</div>
+		if item.Job.RunAt != nil {
+			<div class="text-sm text-gray-300 pl-3">
+				<relative-time>{ item.Job.RunAt.AsTime().Format(time.RFC1123Z) }</relative-time>
+			</div>
+		}
+		<div class="text-sm text-gray-300 flex-grow text-left pl-3">
+			<div class="text-sm font-mono">
+				{ PrettyJSON(item.UnmarshaledPayload) }
+			</div>
+		</div>
+		<div class="text-sm text-gray-300">
+			<a
+				class="text-sm text-gray-300 bg-blue-500 px-2 py-1 rounded-md"
+				href={ templ.SafeURL(fmt.Sprintf("/queues/%s/jobs/%s", queue.Name, item.Job.Uuid)) }
+			>
+				View
+			</a>
+			<a
+				class="text-sm text-gray-300 bg-red-500 px-2 py-1 rounded-md ml-2 cursor-pointer"
+				hx-delete={ deleteEndpoint(item.Job) }
+				hx-vals={ JobPayload(item.Job) }
+				hx-swap="delete"
+				hx-target={ "#qJob" + item.Job.Uuid }
+			>
+				Cancel
+			</a>
+		</div>
+	</div>
+}
+
+func deleteEndpoint(job *wire.Job) string {
+	if job.RunAt != nil {
+		return "/scheduled/jobs"
+	}
+
+	return "/jobs"
 }

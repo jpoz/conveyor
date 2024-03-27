@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *redisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, error) {
+func (s *RedisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, error) {
 	s.log.Debug("Popping jobs from queues", slog.Any("queues", queues))
 
 	go func() {
@@ -29,10 +29,11 @@ func (s *redisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, er
 
 	queueKeys := make([]string, len(queues))
 	for i, queue := range queues {
-		queueKeys[i] = QueueKey(queue)
+		queueKeys[i] = s.QueueKey(queue)
 	}
 
-	payload, err := s.rdb.BRPop(ctx, 2*time.Second, queueKeys...).Result()
+	// TODO: configure the timeout here
+	payload, err := s.rdb.BRPop(ctx, 10*time.Second, queueKeys...).Result()
 	if err == redis.Nil {
 		return nil, nil
 	}

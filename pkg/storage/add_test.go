@@ -7,6 +7,7 @@ import (
 	"github.com/jpoz/conveyor/pkg/storage"
 	"github.com/jpoz/conveyor/wire"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -31,11 +32,13 @@ func TestAddJob(t *testing.T) {
 	assert.NotNil(t, job.Uuid) // Make sure we got a uuid
 
 	rdb := RedisClient(t, s)
-	count, err := rdb.LLen(ctx, storage.QueueKey(job.Queue)).Result()
+	rstore, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
+	count, err := rdb.LLen(ctx, rstore.QueueKey(job.Queue)).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), count)
 
-	jbytes, err := rdb.LPop(ctx, storage.QueueKey(job.Queue)).Result()
+	jbytes, err := rdb.LPop(ctx, rstore.QueueKey(job.Queue)).Result()
 	assert.NoError(t, err)
 	assert.NotNil(t, jbytes)
 
@@ -66,11 +69,13 @@ func TestAddJob_Child(t *testing.T) {
 	assert.NotNil(t, job.Uuid) // Make sure we got a uuid
 
 	rdb := RedisClient(t, s)
-	count, err := rdb.LLen(ctx, storage.ChildenListKey(job.ParentUuid)).Result()
+	rstore, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
+	count, err := rdb.LLen(ctx, rstore.ChildenListKey(job.ParentUuid)).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), count)
 
-	jbytes, err := rdb.RPop(ctx, storage.ChildenListKey(job.ParentUuid)).Result()
+	jbytes, err := rdb.RPop(ctx, rstore.ChildenListKey(job.ParentUuid)).Result()
 	assert.NoError(t, err)
 	assert.NotNil(t, jbytes)
 
@@ -101,11 +106,13 @@ func TestAddJob_OnComplete(t *testing.T) {
 	assert.NoError(t, err)
 
 	rdb := RedisClient(t, s)
-	count, err := rdb.LLen(ctx, storage.OnCompleteListKey(job.PredecessorUuid)).Result()
+	rstore, ok := store.(*storage.RedisHandler)
+	require.True(t, ok)
+	count, err := rdb.LLen(ctx, rstore.OnCompleteListKey(job.PredecessorUuid)).Result()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), count)
 
-	jbytes, err := rdb.RPop(ctx, storage.OnCompleteListKey(job.PredecessorUuid)).Result()
+	jbytes, err := rdb.RPop(ctx, rstore.OnCompleteListKey(job.PredecessorUuid)).Result()
 	assert.NoError(t, err)
 	assert.NotNil(t, jbytes)
 
