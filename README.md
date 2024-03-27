@@ -9,9 +9,9 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/jpoz/conveyor)](https://goreportcard.com/report/github.com/jpoz/conveyor)
 
-⛓️  Chain-able background jobs
-📠 Typed payloads using protobuf
-🛠️ Built in admin, that can be embedded within your app
+- ⛓️  Chain-able background jobs
+- 📠 Typed payloads using protobuf
+- 🛠️ Built in admin, that can be embedded within your app
 
 An asynchronous job runner, enabling developers to efficiently chain jobs together in a highly structured manner. This capability allows for the creation of complex job hierarchies, where a single job can trigger multiple child jobs, followed by an heir job that executes upon the completion of all child jobs.
 
