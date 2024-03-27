@@ -9,7 +9,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/jpoz/conveyor)](https://goreportcard.com/report/github.com/jpoz/conveyor)
 
-- ⛓️  Chain-able background jobs
+- ⛓️ Chain-able background jobs
 - 📠 Typed payloads using protobuf
 - 🛠️ Built in admin, that can be embedded within your app
 
@@ -17,7 +17,9 @@ An asynchronous job runner, enabling developers to efficiently chain jobs togeth
 
 Conveyor can manage multiple layers of chained jobs, streamlining the execution process and enhancing code performance. It's not just about running tasks; it's about doing so in a way that's both logical and efficient, tailored for developers looking for precision and control in their asynchronous operations.
 
-All jobs are fully typed using protobuf. Allowing structured data that can evolve with your application. Since protobuf is language-neutral it also allows the possibility for other languages to start jobs and other languages to be conveyor workers.
+Leveraging protobuf, Conveyor ensures all jobs are precisely typed.  Using protobufs allows for structured data that evolves with your application. It also supports a language-neutral ecosystem. This versatility opens the door for other programming languages to initiate jobs and serve as Conveyor workers, enhancing interoperability and flexibility across different coding environments.
+
+Conveyor incorporates a built-in admin package, designed to enhance operational efficiency and oversight. This package integrates seamlessly, providing a http.Handler  that can be served where you need it, whether that's within an existing admin service or protected by simple HTTP basic authentication. The admin interface offers comprehensive visibility into the queue, enabling admins to view and cancel jobs as needed.
 
 ## Requirements
 
