@@ -1,2 +1,2 @@
-(()=>{console.log("hello console");})();
+(()=>{var a=class extends HTMLElement{connectedCallback(){this.parseAndFormatDate()}parseAndFormatDate(){let t=this.innerHTML.trim(),r=new Date(t);if(isNaN(r.getTime())){console.error("Invalid date:",t);return}this.title=r.toLocaleString();let e=this.getRelativeTime(r);this.innerHTML=e}getRelativeTime(t){let e=Math.round((new Date().getTime()-t.getTime())/1e3),n=Math.round(e/60),s=Math.round(n/60),i=Math.round(s/24);return s<-24?`in ${Math.abs(i)} days`:n<-60?`in ${Math.abs(s)} hours`:e<-60?`in ${Math.abs(n)} minutes`:e<0?`in ${Math.abs(e)} seconds`:e<60?"now":n<60?`${n} minutes ago`:s<24?`${s} hours ago`:i<7?`${i} days ago`:t.toLocaleDateString()}};customElements.define("relative-time",a);})();
 //# sourceMappingURL=main.js.map

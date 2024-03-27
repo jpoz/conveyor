@@ -49,7 +49,11 @@ func main() {
 	}
 
 	err = w.RegisterJobs(StartJob, ChildJob)
-	// err = w.RegisterJobs(StartJob, ChildJob, LastJob)
+	if err != nil {
+		log.Error("failed to register jobs", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	err = w.RegisterJobs(StartJob, ChildJob, LastJob)
 	if err != nil {
 		log.Error("failed to register jobs", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -102,7 +106,7 @@ func main() {
 		Spawn:   3,
 		Levels:  3,
 		Message: "Hello, World!",
-	}, conveyor.Delay(10*60*time.Second))
+	}, conveyor.Delay(5*60*time.Second))
 	if err != nil {
 		log.Error("failed to enqueue job", slog.String("error", err.Error()))
 		os.Exit(1)

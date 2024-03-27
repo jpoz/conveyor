@@ -13,9 +13,11 @@ type Handler interface {
 
 	GetActiveJob(ctx context.Context, uuid string) (*wire.Job, error)
 	AddJob(ctx context.Context, job *wire.Job) error
-	RemoveJob(ctx context.Context, job *wire.Job) error
 	Pop(ctx context.Context, queues ...string) (*wire.Job, error)
 	PopScheduledJobs(ctx context.Context) error
+
+	RemoveJob(ctx context.Context, job *wire.Job) error
+	RemoveScheduledJob(ctx context.Context, job *wire.Job) error
 
 	Notify(ctx context.Context, job *wire.Job, status wire.JobStatus) error
 	Subscribe(ctx context.Context, onStatusChange OnStatusChange) error

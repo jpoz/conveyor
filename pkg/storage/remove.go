@@ -23,3 +23,20 @@ func (s *RedisHandler) RemoveJob(ctx context.Context, job *wire.Job) error {
 
 	return nil
 }
+
+func (s *RedisHandler) RemoveScheduledJob(ctx context.Context, job *wire.Job) error {
+	bts, err := marshalJob(job)
+	if err != nil {
+		return err
+	}
+
+	err = s.rdb.ZRem(ctx, s.ScheduledJobsKey(), bts).Err()
+	if err != nil {
+		if err == redis.Nil {
+			return nil
+		}
+		return err
+	}
+
+	return nil
+}
