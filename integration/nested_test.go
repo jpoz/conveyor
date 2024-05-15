@@ -16,7 +16,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBasic(t *testing.T) {
+// TestNestedJobs starts with one job (MainJob) with a number
+// It then runs that number of ChildJobs
+// After all those ChildJobs are done, it runs the OnCompleteJob
+func TestNestedJobs(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup
@@ -29,7 +32,7 @@ func TestBasic(t *testing.T) {
 	}
 	data := &SafeData{}
 
-	wg.Add(1) // wait for worker
+	wg.Add(1) // wait for one full round of jobs
 	go func() {
 		fmt.Println("starting worker")
 		worker, err := conveyor.NewWorker(cfg)
@@ -39,10 +42,32 @@ func TestBasic(t *testing.T) {
 			return
 		}
 
-		worker.RegisterJobs(func(ctx context.Context, msg *fixtures.Basic) error {
-			fmt.Println("running job", msg.Str, msg.Int)
-			data.SetString(msg.Str)
-			data.SetInt(msg.Int)
+		worker.RegisterJobs(func(ctx context.Context, msg *fixtures.MainTask) error {
+			j := conveyor.CurrentJob(ctx)
+			client := conveyor.CurrentClient(ctx)
+			fmt.Println("running main job", j.Uuid, msg.Num)
+
+			for i := int32(1); i <= msg.Num; i++ {
+				client.Enqueue(ctx, &fixtures.ChildTask{
+					Num: i,
+				})
+			}
+
+			client.EnqueueHeir(ctx, &fixtures.OnCompleteTask{Num: msg.Num})
+
+			return nil
+		})
+		worker.RegisterJobs(func(ctx context.Context, msg *fixtures.ChildTask) error {
+			j := conveyor.CurrentJob(ctx)
+			fmt.Println("running child job", j.Uuid, msg.Num)
+
+			data.IncrInt(msg.Num)
+
+			return nil
+		})
+		worker.RegisterJobs(func(ctx context.Context, msg *fixtures.OnCompleteTask) error {
+			fmt.Println("running on complete job", msg.Num)
+			data.SetString("one two three four five")
 			wg.Done()
 			return nil
 		})
@@ -65,16 +90,13 @@ func TestBasic(t *testing.T) {
 		}
 
 		wg.Add(1)
-		result, err := client.Enqueue(ctx, &fixtures.Basic{
-			Str: "test",
-			Int: 1,
+		result, err := client.Enqueue(ctx, &fixtures.MainTask{
+			Num: 5,
 		})
 		if err != nil {
 			errs <- fmt.Errorf("could not enqueue job: %w", err)
 			return
 		}
-
-		assert.Nil(t, err)
 		assert.NotEmpty(t, result.Uuid)
 
 		fmt.Println("client done")
@@ -89,8 +111,11 @@ func TestBasic(t *testing.T) {
 		// noop
 	}
 
-	assert.Equal(t, "test", data.GetString())
-	assert.Equal(t, int32(1), data.GetInt())
+	// Check the value set from the onComplete job
+	assert.Equal(t, "one two three four five", data.GetString())
+
+	// Check the value set from the child jobs
+	assert.Equal(t, int32(1+2+3+4+5), data.GetInt())
 
 	cancel()
 }

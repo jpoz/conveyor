@@ -107,3 +107,9 @@ func main() {
 	w.Run(context.Background())
 }
 ```
+
+
+#### TODO
+
+- [ ] Fail worker if Redis doesn't connect
+- [ ] s/RegisterJobs/Register

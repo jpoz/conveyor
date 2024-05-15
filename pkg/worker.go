@@ -237,6 +237,8 @@ func (w *Worker) Run(ctx context.Context) error {
 	go w.Periodic(ctx, 30*time.Second, w.handler.PruneActiveWorkers)
 	go w.Periodic(ctx, 1*time.Second, w.handler.PopScheduledJobs)
 
+	w.log.Info("Starting worker", slog.String("id", w.ID))
+
 	for {
 		job, err := w.handler.Pop(ctx, w.registeredFullNames...)
 		if err != nil {
