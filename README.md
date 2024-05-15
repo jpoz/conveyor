@@ -8,8 +8,9 @@
 # Conveyor
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/jpoz/conveyor)](https://goreportcard.com/report/github.com/jpoz/conveyor)
+[![Go Reference](https://pkg.go.dev/badge/github.com/jpoz/conveyor.svg)](https://pkg.go.dev/github.com/jpoz/conveyor)
 
-- ⛓️ Chain-able background jobs
+- ⛓️  Chain-able background jobs
 - 📠 Typed payloads using protobuf
 - 🛠️ Built in admin, that can be embedded within your app
 
