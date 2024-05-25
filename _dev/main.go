@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	conveyor "github.com/jpoz/conveyor/pkg"
-	"github.com/jpoz/conveyor/pkg/config"
-	"github.com/jpoz/conveyor/pkg/hub"
+	conveyor "github.com/jpoz/conveyor"
+	"github.com/jpoz/conveyor/config"
+	"github.com/jpoz/conveyor/hub"
 	"github.com/lmittmann/tint"
 )
 

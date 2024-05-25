@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jpoz/conveyor/pkg/config"
-	"github.com/jpoz/conveyor/pkg/storage"
+	"github.com/jpoz/conveyor/config"
+	"github.com/jpoz/conveyor/storage"
 	"github.com/jpoz/conveyor/wire"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -214,14 +214,14 @@ func (w *Worker) Heartbeat(ctx context.Context) error {
 	for {
 		err := w.handler.Ping(ctx)
 		if err != nil {
-			logrus.Error(err)
+			slog.Error("failed to ping redis", err)
 		}
 
 		tick := time.NewTicker(15 * time.Second)
 		select {
 		case <-tick.C:
 		case <-ctx.Done():
-			logrus.Info("Stopping heartbeat")
+			slog.Info("Stopping heartbeat")
 			return nil
 		}
 	}
@@ -239,26 +239,44 @@ func (w *Worker) Run(ctx context.Context) error {
 
 	w.log.Info("Starting worker", slog.String("id", w.ID))
 
+	// Create a channel for jobs and a wait group for synchronization
+	jobsChan := make(chan *wire.Job)
+	var wg sync.WaitGroup
+
+	// Start a fixed number of goroutines to process jobs
+	numWorkers := w.cfg.GetConcurrency()
+	wg.Add(numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			defer wg.Done()
+			for job := range jobsChan {
+				if err := w.CallJob(ctx, job); err != nil {
+					slog.Error("failed to call job", "error", err)
+				}
+			}
+		}()
+	}
+
 	for {
 		job, err := w.handler.Pop(ctx, w.registeredFullNames...)
 		if err != nil {
-			logrus.Error(err)
+			slog.Error("failed to pop job", "error", err)
 			return err
 		}
 
 		if job == nil {
 			select {
 			case <-ctx.Done():
+				slog.Info("Stopping worker")
+				close(jobsChan) // Close the channel to stop workers
+				wg.Wait()       // Wait for all workers to finish processing
 				return nil
 			default:
 			}
 			continue
 		}
 
-		err = w.CallJob(ctx, job)
-		if err != nil {
-			logrus.Error(err)
-		}
+		jobsChan <- job
 	}
 }
 

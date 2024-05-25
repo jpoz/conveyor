@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jpoz/conveyor/pkg/storage"
+	"github.com/jpoz/conveyor/storage"
 	"github.com/jpoz/conveyor/wire"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"

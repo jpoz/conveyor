@@ -6,12 +6,22 @@ import (
 )
 
 type Project struct {
+	Addr        string `yaml:"addr"`
 	RedisURL    string `yaml:"redisURL"`
 	Namespace   string `yaml:"namespace"`
 	Concurrency int    `yaml:"concurrency"`
 	Logger      *slog.Logger
 
 	mutex sync.Mutex
+}
+
+func (p *Project) GetAddr() string {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.Addr == "" {
+		return DefaultAddr
+	}
+	return p.Addr
 }
 
 func (p *Project) GetConcurrency() int {

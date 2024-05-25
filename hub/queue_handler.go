@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/jpoz/conveyor/pkg/hub/views"
+	"github.com/jpoz/conveyor/hub/views"
 )
 
 func (s *Server) QueuesPageHandler(w http.ResponseWriter, r *http.Request) {

@@ -41,8 +41,8 @@ import (
 	"os"
 
 	"github.com/jpoz/conveyor/_examples/basic"
-	conveyor "github.com/jpoz/conveyor/pkg"
-	"github.com/jpoz/conveyor/pkg/config"
+	conveyor "github.com/jpoz/conveyor"
+	"github.com/jpoz/conveyor/config"
 )
 
 func main() {
@@ -83,8 +83,8 @@ import (
 	"os"
 
 	"github.com/jpoz/conveyor/_examples/basic"
-	conveyor "github.com/jpoz/conveyor/pkg"
-	"github.com/jpoz/conveyor/pkg/config"
+	conveyor "github.com/jpoz/conveyor"
+	"github.com/jpoz/conveyor/config"
 )
 
 func main() {
@@ -112,5 +112,8 @@ func main() {
 
 #### TODO
 
+- [ ] Move pkg out of pkg dir
+- [ ] Fix error when hub is used outside of the project
+- [ ] Add Addr to Project config
 - [ ] Fail worker if Redis doesn't connect
 - [ ] s/RegisterJobs/Register

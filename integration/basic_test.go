@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/jpoz/conveyor/fixtures"
-	conveyor "github.com/jpoz/conveyor/pkg"
-	"github.com/jpoz/conveyor/pkg/config"
+	conveyor "github.com/jpoz/conveyor"
+	"github.com/jpoz/conveyor/config"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -8,7 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/jpoz/conveyor/pkg/config"
+	"github.com/jpoz/conveyor/config"
 	"github.com/jpoz/conveyor/wire"
 )
 

@@ -10,8 +10,8 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/jpoz/conveyor/pkg/config"
-	"github.com/jpoz/conveyor/pkg/storage"
+	"github.com/jpoz/conveyor/config"
+	"github.com/jpoz/conveyor/storage"
 	"github.com/jpoz/conveyor/wire"
 	"github.com/jpoz/goes"
 	"google.golang.org/protobuf/proto"

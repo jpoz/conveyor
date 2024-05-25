@@ -1,8 +1,0 @@
-syntax = "proto3";
-package tasks;
-
-option go_package = "github.com/jpoz/conveyor/examples/error/tasks";
-
-message Task {
-  int32 num = 1;
-}

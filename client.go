@@ -9,8 +9,8 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/jpoz/conveyor/pkg/config"
-	"github.com/jpoz/conveyor/pkg/storage"
+	"github.com/jpoz/conveyor/config"
+	"github.com/jpoz/conveyor/storage"
 	"github.com/jpoz/conveyor/wire"
 )
 

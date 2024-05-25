@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jpoz/conveyor/pkg/storage"
+	"github.com/jpoz/conveyor/storage"
 )
 
 var ResultColors = []string{"#4caf50", "#2196f3", "#f44336"}

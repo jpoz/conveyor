@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/jpoz/conveyor/pkg/hub/views"
+	"github.com/jpoz/conveyor/hub/views"
 	"github.com/jpoz/conveyor/wire"
 )
 

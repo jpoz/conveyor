@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/anypb"
 
-	"github.com/jpoz/conveyor/pkg/hub/views"
+	"github.com/jpoz/conveyor/hub/views"
 	"github.com/jpoz/conveyor/wire"
 )
 
