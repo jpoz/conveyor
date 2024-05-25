@@ -74,7 +74,7 @@ gen: ## Generate protobuf models
 	go generate ./...
 
 .PHONY: gen_protos
-gen_protos: gen_go_protos gen_python_protos ## Generate protobuf models
+gen_protos: gen_go_protos ## Generate protobuf models
 
 
 .PHONY: gen_go_protos
@@ -83,14 +83,6 @@ gen_go_protos:
 	protoc --go_out=. --go_opt=paths=source_relative \
 			--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 			${PROTO_FILES}
-
-gen_python_protos:
-	python -m grpc_tools.protoc -I wire --python_out=./libs/py/conveyor/wire --grpc_python_out=./libs/py/conveyor/wire wire/jobs.proto
-	protol \
-		--create-package \
-		--in-place \
-		--python-out ./libs/py/conveyor/wire \
-		protoc --proto-path=./wire wire/jobs.proto
 
 ## Test
 .PHONY: test

@@ -1,7 +1,7 @@
 syntax = "proto3";
-package basic;
+package main;
 
-option go_package = "github.com/jpoz/conveyor/examples/basic";
+option go_package = "github.com/jpoz/conveyor/_examples/basic/main";
 
 message BasicJob {
   string name = 1;
