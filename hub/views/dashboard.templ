@@ -40,7 +40,7 @@ templ Dashboard() {
 			<div class="max-h-96">
 				<canvas id="jobChart" class="w-full bg-stone-900"></canvas>
 			</div>
-			@buildChart("jobChart", "/api/counts")
+			@buildChart("jobChart", URL(ctx, "/api/counts"))
 		</div>
 	}
 }

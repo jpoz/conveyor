@@ -1,2 +1,24 @@
-(()=>{var a=class extends HTMLElement{connectedCallback(){this.parseAndFormatDate()}parseAndFormatDate(){let t=this.innerHTML.trim(),r=new Date(t);if(isNaN(r.getTime())){console.error("Invalid date:",t);return}this.title=r.toLocaleString();let e=this.getRelativeTime(r);this.innerHTML=e}getRelativeTime(t){let e=Math.round((new Date().getTime()-t.getTime())/1e3),n=Math.round(e/60),s=Math.round(n/60),i=Math.round(s/24);return s<-24?`in ${Math.abs(i)} days`:n<-60?`in ${Math.abs(s)} hours`:e<-60?`in ${Math.abs(n)} minutes`:e<0?`in ${Math.abs(e)} seconds`:e<60?"now":n<60?`${n} minutes ago`:s<24?`${s} hours ago`:i<7?`${i} days ago`:t.toLocaleDateString()}};customElements.define("relative-time",a);})();
+(() => {
+  // hub/src/main.ts
+  var RelativeTimeComponent = class extends HTMLElement {
+    connectedCallback() {
+      this.parseAndFormatDate();
+    }
+    parseAndFormatDate() {
+      let dateStr = this.innerHTML.trim(), date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        console.error("Invalid date:", dateStr);
+        return;
+      }
+      this.title = date.toLocaleString();
+      let relativeTime = this.getRelativeTime(date);
+      this.innerHTML = relativeTime;
+    }
+    getRelativeTime(date) {
+      let seconds = Math.round(((/* @__PURE__ */ new Date()).getTime() - date.getTime()) / 1e3), minutes = Math.round(seconds / 60), hours = Math.round(minutes / 60), days = Math.round(hours / 24);
+      return hours < -24 ? `in ${Math.abs(days)} days` : minutes < -60 ? `in ${Math.abs(hours)} hours` : seconds < -60 ? `in ${Math.abs(minutes)} minutes` : seconds < 0 ? `in ${Math.abs(seconds)} seconds` : seconds < 60 ? "now" : minutes < 60 ? `${minutes} minutes ago` : hours < 24 ? `${hours} hours ago` : days < 7 ? `${days} days ago` : date.toLocaleDateString();
+    }
+  };
+  customElements.define("relative-time", RelativeTimeComponent);
+})();
 //# sourceMappingURL=main.js.map

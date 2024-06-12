@@ -28,6 +28,14 @@ Conveyor incorporates a built-in admin package, designed to enhance operational 
 - [Protobuf](https://developers.google.com/protocol-buffers)
 - [Redis](https://redis.io)
 
+
+## Installation
+
+```bash
+go install github.com/jpoz/conveyor
+```
+
+
 ## Example
 
 #### Producer

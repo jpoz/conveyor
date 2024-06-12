@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"reflect"
 	"runtime/debug"
 	"time"
 
 	"github.com/jpoz/conveyor/config"
+	"github.com/jpoz/conveyor/hub/views"
 	"github.com/jpoz/conveyor/storage"
 	"github.com/jpoz/conveyor/wire"
-	"github.com/jpoz/goes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -132,7 +133,7 @@ func (s *Server) MuxRecover(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) Mux() http.Handler {
+func (s *Server) Handler(prefix string) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /", s.HomeHandler)
@@ -148,15 +149,25 @@ func (s *Server) Mux() http.Handler {
 	mux.HandleFunc("DELETE /scheduled/jobs", s.DeleteScheduledJobsHandler)
 
 	mux.HandleFunc("GET /static/*", s.StaticHandler("/static"))
-	mux.HandleFunc("GET /js/*", JSHandler("/js", goes.Options{
-		Logger: s.log,
-		Mode:   goes.ModeBuild,
-	}))
+	mux.HandleFunc("GET /js/*", SrcHandler(filepath.Join(prefix, "js")))
 
-	return s.MuxLogger(s.MuxRecover(mux))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Conveyor path not found: %s", path)
+	})
+
+	prefexHandler := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r = r.WithContext(views.SetPrefix(r.Context(), prefix))
+			http.StripPrefix(prefix, next).ServeHTTP(w, r)
+		})
+	}
+
+	return prefexHandler(s.MuxLogger(s.MuxRecover(mux)))
 }
 
 func (s *Server) Run(ctx context.Context) error {
 	s.log.Info("starting conveyor hub server", slog.String("addr", s.config.GetAddr()))
-	return http.ListenAndServe(s.config.GetAddr(), s.Mux())
+	return http.ListenAndServe(s.config.GetAddr(), s.Handler("/"))
 }

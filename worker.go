@@ -41,7 +41,7 @@ type Worker struct {
 	middlewares         []WorkerMiddleware
 }
 
-type WorkerMiddleware func(ctx context.Context, job *wire.Job) error
+type WorkerMiddleware func(ctx context.Context, job *wire.Job, next func(ctx context.Context) error) error
 
 func NewWorker(cfg config.WorkerConfig) (*Worker, error) {
 	baseLog := cfg.GetLogger()
@@ -141,7 +141,19 @@ func (w *Worker) ContextFor(job *wire.Job) context.Context {
 }
 
 func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
-	err := w.callJob(job)
+	handler := func(ctx context.Context) error {
+		return w.callJob(job)
+	}
+
+	for i := len(w.middlewares) - 1; i >= 0; i-- {
+		mw := w.middlewares[i]
+		next := handler
+		handler = func(ctx context.Context) error {
+			return mw(ctx, job, next)
+		}
+	}
+
+	err := handler(ctx)
 	if err != nil {
 		ierr := w.handler.FailJob(ctx, job.Uuid)
 		if ierr != nil {

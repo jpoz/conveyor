@@ -22,3 +22,9 @@ type HubConfig interface {
 	GetAddr() string
 	RedisConfig
 }
+
+type ProjectConfig interface {
+	ClientConfig
+	WorkerConfig
+	HubConfig
+}

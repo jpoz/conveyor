@@ -12,12 +12,12 @@ templ AppLayout(title, current string) {
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>Conveyor - { title }</title>
-			<link rel="stylesheet" href="/static/app.css"/>
-			<script src="/static/htmx.min.js" defer></script>
-			<script src="/static/sse.js" defer></script>
-			<script src="/js/main.js" defer></script>
+			<link rel="stylesheet" href={ URL(ctx, "/static/app.css") }/>
+			<script src={ URL(ctx, "/static/htmx.min.js") } defer></script>
+			<script src={ URL(ctx, "/static/sse.js") } defer></script>
+			<script src={ URL(ctx, "/js/main.js") } defer></script>
 			<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-			<link rel="icon" href="/static/favicon.png" type="image/x-icon"/>
+			<link rel="icon" href={ URL(ctx, "/static/favicon.png") } type="image/x-icon"/>
 		</head>
 		<body class="h-full">
 			<div class="min-h-full">
@@ -26,7 +26,7 @@ templ AppLayout(title, current string) {
 						<div class="flex h-16 items-center justify-between">
 							<div class="flex items-center">
 								<div class="flex-shrink-0">
-									<img class="h-8 w-8" src="/static/favicon.png" alt="Conveyor"/>
+									<img class="h-8 w-8" src={ URL(ctx, "/static/favicon.png") } alt="Conveyor"/>
 								</div>
 								@nav(current)
 							</div>
@@ -45,11 +45,11 @@ templ AppLayout(title, current string) {
 
 templ nav(current string) {
 	<nav class="flex space-x-4 ml-4" aria-label="Tabs">
-		<a class={ tabStyle(current, "dashboard") } href={ templ.SafeURL("/") }>Dashboard</a>
+		<a class={ tabStyle(current, "dashboard") } href={ SafeURL(ctx, "/") }>Dashboard</a>
 		<div class="hidden">
-			<a class={ tabStyle(current, "stream") } href={ templ.SafeURL("/stream") }>Stream</a>
+			<a class={ tabStyle(current, "stream") } href={ SafeURL(ctx, "/stream") }>Stream</a>
 		</div>
-		<a class={ tabStyle(current, "queues") } href={ templ.SafeURL("/queues") }>Queues</a>
+		<a class={ tabStyle(current, "queues") } href={ SafeURL(ctx, "/queues") }>Queues</a>
 	</nav>
 }
 
