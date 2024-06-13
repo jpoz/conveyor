@@ -131,9 +131,7 @@ func (w *Worker) Use(fn ...WorkerMiddleware) {
 	w.middlewares = append(w.middlewares, fn...)
 }
 
-func (w *Worker) ContextFor(job *wire.Job) context.Context {
-	ctx := context.Background()
-
+func (w *Worker) ContextFor(ctx context.Context, job *wire.Job) context.Context {
 	ctx = JobContext(ctx, job)
 	ctx = AddClientToContext(ctx, w.client)
 
@@ -141,15 +139,16 @@ func (w *Worker) ContextFor(job *wire.Job) context.Context {
 }
 
 func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
-	handler := func(ctx context.Context) error {
-		return w.callJob(job)
+	handler := func(ictx context.Context) error {
+		w.log.Info("calling job!!", slog.String("uuid", job.Uuid), slog.Any("job", job))
+		return w.callJob(ictx, job)
 	}
 
 	for i := len(w.middlewares) - 1; i >= 0; i-- {
 		mw := w.middlewares[i]
 		next := handler
-		handler = func(ctx context.Context) error {
-			return mw(ctx, job, next)
+		handler = func(ictx context.Context) error {
+			return mw(ictx, job, next)
 		}
 	}
 
@@ -169,9 +168,16 @@ func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
 	return nil
 }
 
-func (w *Worker) callJob(job *wire.Job) error {
+func (w *Worker) callJob(ctx context.Context, job *wire.Job) error {
+	defer func() {
+		if r := recover(); r != nil {
+			w.log.Error("panic", slog.Any("panic", r))
+		}
+	}()
+
 	registered, ok := w.fnMap[string(job.Type)]
 	if !ok {
+		w.log.Error("job not registered", slog.String("job", job.Type))
 		return fmt.Errorf("[%s] %w, %s", w.ID, ErrJobNotRegistered, job.Type)
 	}
 	msgType := registered.T
@@ -181,18 +187,20 @@ func (w *Worker) callJob(job *wire.Job) error {
 
 	msg, ok := instance.(proto.Message)
 	if !ok {
+		w.log.Error("invalid message type", slog.String("job", job.Type))
 		return errors.New("invalid message type")
 	}
 
 	err := proto.Unmarshal(job.Payload, msg)
 	if err != nil {
+		w.log.Error("failed to unmarshal payload", slog.String("job", job.Type))
 		return fmt.Errorf("failed to unmarshal payload: %v", err)
 	}
 
 	val := reflect.ValueOf(fn)
 	argVal := reflect.ValueOf(msg)
 
-	ctx := w.ContextFor(job)
+	ctx = w.ContextFor(ctx, job)
 
 	ierr := w.handler.Notify(ctx, job, wire.JobStatus_RUNNING)
 	if ierr != nil {
@@ -210,6 +218,7 @@ func (w *Worker) callJob(job *wire.Job) error {
 		if ierr != nil {
 			w.log.Error("failed to notify on failure", slog.String("error", ierr.Error()))
 		}
+		w.log.Error("failed to call function", slog.String("error", err.Error()))
 		return fmt.Errorf("failed to call function: %v", err)
 	}
 
@@ -219,7 +228,6 @@ func (w *Worker) callJob(job *wire.Job) error {
 	}
 
 	return nil
-
 }
 
 func (w *Worker) Heartbeat(ctx context.Context) error {
