@@ -133,8 +133,22 @@ func (s *Server) MuxRecover(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) Handler(prefix string) http.Handler {
+type HandlerOpts struct {
+	Prefix  string
+	HomeURL string
+}
+
+func (s *Server) Handler(opts HandlerOpts) http.Handler {
 	mux := http.NewServeMux()
+
+	prefix := opts.Prefix
+	if prefix == "" {
+		prefix = "/"
+	}
+	homeURL := opts.HomeURL
+	if homeURL == "" {
+		homeURL = "/"
+	}
 
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		basePath := filepath.Join(prefix, "dashboard")
@@ -163,7 +177,8 @@ func (s *Server) Handler(prefix string) http.Handler {
 
 	prefexHandler := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(views.SetPrefix(r.Context(), prefix))
+			ctx := views.SetHomeURL(r.Context(), homeURL)
+			r = r.WithContext(views.SetPrefix(ctx, prefix))
 			http.StripPrefix(prefix, next).ServeHTTP(w, r)
 		})
 	}
@@ -173,5 +188,5 @@ func (s *Server) Handler(prefix string) http.Handler {
 
 func (s *Server) Run(ctx context.Context) error {
 	s.log.Info("starting conveyor hub server", slog.String("addr", s.config.GetAddr()))
-	return http.ListenAndServe(s.config.GetAddr(), s.Handler("/"))
+	return http.ListenAndServe(s.config.GetAddr(), s.Handler(HandlerOpts{}))
 }

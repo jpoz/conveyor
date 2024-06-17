@@ -26,7 +26,9 @@ templ AppLayout(title, current string) {
 						<div class="flex h-16 items-center justify-between">
 							<div class="flex items-center">
 								<div class="flex-shrink-0">
-									<img class="h-8 w-8" src={ URL(ctx, "/static/favicon.png") } alt="Conveyor"/>
+									<a href={ SafeHomeURL(ctx) }>
+										<img class="h-8 w-8" src={ URL(ctx, "/static/favicon.png") } alt="Conveyor"/>
+									</a>
 								</div>
 								@nav(current)
 							</div>
