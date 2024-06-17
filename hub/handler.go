@@ -11,7 +11,7 @@ import (
 
 var upgrader = websocket.Upgrader{}
 
-func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) DashboardHandler(w http.ResponseWriter, r *http.Request) {
 	views.Dashboard().Render(r.Context(), w)
 }
 

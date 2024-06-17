@@ -1,7 +1,7 @@
 package views
 
 const (
-	activeTabStyle   = "bg-gray-900 text-white rounded-md px-3 py-2 text-sm font-medium"
+	activeTabStyle   = "bg-gray-200 text-gray-700 rounded-md px-3 py-2 text-sm font-medium"
 	inactiveTabStyle = "text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium"
 )
 
@@ -45,7 +45,7 @@ templ AppLayout(title, current string) {
 
 templ nav(current string) {
 	<nav class="flex space-x-4 ml-4" aria-label="Tabs">
-		<a class={ tabStyle(current, "dashboard") } href={ SafeURL(ctx, "/") }>Dashboard</a>
+		<a class={ tabStyle(current, "dashboard") } href={ SafeURL(ctx, "/dashboard") }>Dashboard</a>
 		<div class="hidden">
 			<a class={ tabStyle(current, "stream") } href={ SafeURL(ctx, "/stream") }>Stream</a>
 		</div>

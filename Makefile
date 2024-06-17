@@ -24,7 +24,6 @@ all: help
 install: ## install dependencies
 	brew install pre-commit protobuf
 	pre-commit install
-	go install github.com/cespare/reflex@latest
 	go install github.com/kisielk/errcheck@latest
 	go install honnef.co/go/tools/cmd/staticcheck@latest
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -32,8 +31,6 @@ install: ## install dependencies
 	go install github.com/chrusty/protoc-gen-jsonschema/cmd/protoc-gen-jsonschema@latest
 	go install github.com/jpoz/protoc-gen-go-sqljson/cmd/protoc-gen-go-sqljson@latest
 	go mod download
-	cd ui && npm install
-	pip install protobuf protoletariat
 
 ## Dev
 .PHONY: docker
@@ -48,17 +45,9 @@ docker-down: ## shutdown docker
 docker-clean: ## nuke the docker-compose and volumes
 	docker-compose down -v
 
-.PHONY: hub
-hub: docker  ## Run hub
-	$(GOCMD) run cmd/hub/main.go
-
 .PHONY: dev
 dev: docker ## Run hub (rebuilt with air)
 	air
-
-.PHONY: dev_recurring_job
-dev_recurring_job: docker templ## Run recurring job (for development)
-	go run _examples/recurring/main.go
 
 .PHONY: templ
 templ: ## Run worker (for development)
@@ -69,16 +58,8 @@ dev_worker: docker
 	(cd ui && npm start)
 
 ## Gen
-.PHONY: gen
-gen: ## Generate protobuf models
-	go generate ./...
-
 .PHONY: gen_protos
-gen_protos: gen_go_protos ## Generate protobuf models
-
-
-.PHONY: gen_go_protos
-gen_go_protos:
+gen_protos:
 	@echo ${PROTO_FILES}
 	protoc --go_out=. --go_opt=paths=source_relative \
 			--go-grpc_out=. --go-grpc_opt=paths=source_relative \
@@ -87,8 +68,6 @@ gen_go_protos:
 ## Test
 .PHONY: test
 test: ## Run tests
-	$(GOTEST) -- -race ${GO_PKGS}
-
 .PHONY: cover
 cover: test ## Generate coverage report
 	$(GOCMD) tool cover -html=coverage.out
@@ -96,10 +75,6 @@ cover: test ## Generate coverage report
 .PHONY: integration
 integration: ## Run tests + integration
 	./run-tests.sh
-
-.PHONY: build
-build: ui_build  ## Build hub cmd
-	$(GOCMD) build -o conveyor cmd/hub/main.go
 
 ## Help:
 .PHONY: help

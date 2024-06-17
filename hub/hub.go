@@ -136,15 +136,19 @@ func (s *Server) MuxRecover(next http.Handler) http.Handler {
 func (s *Server) Handler(prefix string) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /", s.HomeHandler)
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		basePath := filepath.Join(prefix, "dashboard")
+		http.Redirect(w, r, basePath, http.StatusFound)
+	})
 	mux.HandleFunc("GET /api/counts", s.JobsApi)
+	mux.HandleFunc("GET /dashboard", s.DashboardHandler)
 	mux.HandleFunc("GET /events", s.EventHandler)
 	mux.HandleFunc("GET /jobs", s.JobsHandler)
 	mux.HandleFunc("GET /queues", s.QueuesPageHandler)
-	mux.HandleFunc("GET /queues/{queueName}", s.QueuePageHandler)
 	mux.HandleFunc("GET /queues/scheduled", s.ScheduledPageHandler)
-	mux.HandleFunc("GET /queues/{queueName}/jobs/{jobUuid}", s.JobPageHandler)
 	mux.HandleFunc("GET /queues/scheduled/jobs/{jobUuid}", s.ScheduledJobPageHandler)
+	mux.HandleFunc("GET /queues/{queueName}", s.QueuePageHandler)
+	mux.HandleFunc("GET /queues/{queueName}/jobs/{jobUuid}", s.JobPageHandler)
 	mux.HandleFunc("DELETE /jobs", s.DeleteJobsHandler)
 	mux.HandleFunc("DELETE /scheduled/jobs", s.DeleteScheduledJobsHandler)
 

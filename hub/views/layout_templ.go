@@ -11,7 +11,7 @@ import "io"
 import "bytes"
 
 const (
-	activeTabStyle   = "bg-gray-900 text-white rounded-md px-3 py-2 text-sm font-medium"
+	activeTabStyle   = "bg-gray-200 text-gray-700 rounded-md px-3 py-2 text-sm font-medium"
 	inactiveTabStyle = "text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium"
 )
 
@@ -185,7 +185,7 @@ func nav(current string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var12 templ.SafeURL = SafeURL(ctx, "/")
+		var templ_7745c5c3_Var12 templ.SafeURL = SafeURL(ctx, "/dashboard")
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var12)))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

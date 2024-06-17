@@ -19,5 +19,6 @@ func URL(ctx context.Context, path string) string {
 }
 
 func SafeURL(ctx context.Context, path string) templ.SafeURL {
-	return templ.SafeURL(URL(ctx, path))
+	path = URL(ctx, path)
+	return templ.SafeURL(path)
 }

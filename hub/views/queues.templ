@@ -17,6 +17,10 @@ type QueueView struct {
 	Jobs []JobView
 }
 
+script gotoUrl(queueName string) {
+	window.location.href = "../queues/" + queueName
+}
+
 script gotoQueue(queueName string) {
 	window.location.href = "../queues/" + queueName
 }
@@ -60,12 +64,11 @@ templ Queues(queues []QueueView) {
 				<div>
 					<ul class="divide-y divide-gray-700">
 						for _, item := range queues {
-							<li
-								class="p-3 flex justify-between items-center hover:bg-gray-800"
-								onclick={ gotoQueue(item.Name) }
-							>
-								<div class="text-sm font-medium text-gray-300">{ item.Name }</div>
-								<div class="text-sm text-gray-300">{ fmt.Sprintf("%d", item.JobCount) } jobs</div>
+							<li>
+								<a href={ SafeURL(ctx, fmt.Sprintf("/queues/%s", item.Name)) } class="p-3 flex justify-between items-center hover:bg-gray-800">
+									<div class="text-sm font-medium text-gray-300">{ item.Name }</div>
+									<div class="text-sm text-gray-300">{ fmt.Sprintf("%d", item.JobCount) } jobs</div>
+								</a>
 							</li>
 						}
 					</ul>
