@@ -278,6 +278,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 
 	for {
+		slog.Info("Waiting for next job")
 		job, err := w.handler.Pop(ctx, w.registeredFullNames...)
 		if err != nil {
 			slog.Error("failed to pop job", "error", err)
@@ -287,9 +288,10 @@ func (w *Worker) Run(ctx context.Context) error {
 		if job == nil {
 			select {
 			case <-ctx.Done():
-				slog.Info("Stopping worker")
+				slog.Info("Stopping worker(s)")
 				close(jobsChan) // Close the channel to stop workers
 				wg.Wait()       // Wait for all workers to finish processing
+				slog.Info("Stopped worker(s)")
 				return nil
 			default:
 			}

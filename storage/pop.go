@@ -32,12 +32,24 @@ func (s *RedisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, er
 		queueKeys[i] = s.QueueKey(queue)
 	}
 
+	var payload []string
+	var err error
+
 	// TODO: configure the timeout here
-	payload, err := s.rdb.BRPop(ctx, 10*time.Second, queueKeys...).Result()
+	// TODO: configure retries here
+	for attempt := 0; attempt < 10; attempt++ {
+		payload, err = s.rdb.BRPop(ctx, 2*time.Second, queueKeys...).Result()
+		if err == nil {
+			break
+		}
+		s.log.Error("pop job error", "error", err, "attempt", attempt+1)
+		time.Sleep(1 * time.Second) // Wait a bit before retrying
+	}
 	if err == redis.Nil {
 		return nil, nil
 	}
 	if err != nil {
+		s.log.Error("fatal error to pop job", "error", err)
 		return nil, err
 	}
 
