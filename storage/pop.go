@@ -39,7 +39,7 @@ func (s *RedisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, er
 	// TODO: configure retries here
 	for attempt := 0; attempt < 10; attempt++ {
 		payload, err = s.rdb.BRPop(ctx, 2*time.Second, queueKeys...).Result()
-		if err == nil {
+		if err == nil || err == redis.Nil {
 			break
 		}
 		s.log.Error("pop job error", "error", err, "attempt", attempt+1)

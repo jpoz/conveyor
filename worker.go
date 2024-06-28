@@ -278,7 +278,6 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 
 	for {
-		slog.Info("Waiting for next job")
 		job, err := w.handler.Pop(ctx, w.registeredFullNames...)
 		if err != nil {
 			slog.Error("failed to pop job", "error", err)
