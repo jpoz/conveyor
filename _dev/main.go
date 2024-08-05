@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"io"
+	"fmt"
 	"log/slog"
+	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 )
 
 var redisURL = "redis://localhost:36379"
+var sleep = 3 * time.Second
 
 func main() {
 	var (
@@ -25,7 +27,7 @@ func main() {
 	)
 	flag.Parse()
 
-	log := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
+	log := slog.New(tint.NewHandler(os.Stdout, &tint.Options{
 		Level:      slog.LevelDebug,
 		TimeFormat: time.Kitchen,
 	}))
@@ -37,8 +39,8 @@ func main() {
 
 	w, err := conveyor.NewWorker(&config.Worker{
 		RedisURL: redisURL,
-		Logger: slog.New(tint.NewHandler(io.Discard, &tint.Options{
-			Level:      slog.LevelDebug,
+		Logger: slog.New(tint.NewHandler(os.Stdout, &tint.Options{
+			Level:      slog.LevelInfo,
 			TimeFormat: time.Kitchen,
 		})),
 	})
@@ -48,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = w.RegisterJobs(StartJob, ChildJob)
+	err = w.RegisterJobs(StartJob, ChildJob, LastJob)
 	if err != nil {
 		log.Error("failed to register jobs", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -82,6 +84,7 @@ func main() {
 				os.Exit(1)
 			}
 
+			log.Info("Starting hub...")
 			s.Run(ctx)
 		}()
 	}
@@ -126,13 +129,14 @@ func StartJob(ctx context.Context, arg *Start) error {
 
 	_, err := client.EnqueueHeir(ctx, &Last{Level: 0, Message: arg.Message})
 	if err != nil {
+		slog.Error("failed to enqueue job", slog.String("error", err.Error()))
 		return err
 	}
 
-	// slog.Info("[%s] Enqueing %d for %d levels\n", j.Uuid, arg.Spawn, arg.Levels)
-
 	// random spawn
 	spawnr := int32(time.Now().Unix()) % (arg.Spawn + 1)
+
+	time.Sleep(sleep)
 
 	for i := int32(0); i < arg.Spawn; i++ {
 		_, err := client.EnqueueChild(ctx, &Child{
@@ -149,11 +153,18 @@ func StartJob(ctx context.Context, arg *Start) error {
 }
 
 func ChildJob(ctx context.Context, arg *Child) error {
+	time.Sleep(sleep)
+
+	if rand.Intn(5) > 2 {
+		return fmt.Errorf("child job failed")
+	}
+
 	return nil
 }
 
 func LastJob(ctx context.Context, arg *Last) error {
 	client := conveyor.CurrentClient(ctx)
+	time.Sleep(sleep)
 	_, err := client.Enqueue(ctx, &Start{})
 	if err != nil {
 		slog.Error("failed to enqueue job", slog.String("error", err.Error()))

@@ -12,14 +12,14 @@ import "bytes"
 
 func buildChart(id, endpoint string) templ.ComponentScript {
 	return templ.ComponentScript{
-		Name: `__templ_buildChart_4853`,
-		Function: `function __templ_buildChart_4853(id, endpoint){document.addEventListener('DOMContentLoaded', function() {
+		Name: `__templ_buildChart_e07e`,
+		Function: `function __templ_buildChart_e07e(id, endpoint){document.addEventListener('DOMContentLoaded', function() {
         fetch(endpoint)
             .then(response => response.json())
             .then(data => {
                 const ctx = document.getElementById(id).getContext('2d');
                 const myChart = new Chart(ctx, {
-                    type: 'bar',
+                    type: 'line',
                     data: {
                         labels: data.labels,
                         datasets: data.datasets
@@ -45,8 +45,8 @@ func buildChart(id, endpoint string) templ.ComponentScript {
             .catch(error => console.error('Error loading chart data:', error));
     });
 }`,
-		Call:       templ.SafeScript(`__templ_buildChart_4853`, id, endpoint),
-		CallInline: templ.SafeScriptInline(`__templ_buildChart_4853`, id, endpoint),
+		Call:       templ.SafeScript(`__templ_buildChart_e07e`, id, endpoint),
+		CallInline: templ.SafeScriptInline(`__templ_buildChart_e07e`, id, endpoint),
 	}
 }
 
@@ -69,11 +69,19 @@ func Dashboard() templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"py-4\"><div class=\"max-h-96\"><canvas id=\"jobChart\" class=\"w-full bg-stone-900\"></canvas></div>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"py-4\"><div class=\"max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6\"><h3 class=\"p-2 text-white\">Jobs</h3><canvas id=\"jobChart\" class=\"w-full bg-stone-800\"></canvas></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			templ_7745c5c3_Err = buildChart("jobChart", URL(ctx, "/api/counts")).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div><div class=\"py-4\"><div class=\"max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6\"><h3 class=\"p-2 text-white\">Workers</h3><canvas id=\"jobChart2\" class=\"w-full bg-stone-800\"></canvas></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = buildChart("jobChart2", URL(ctx, "/api/workers")).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

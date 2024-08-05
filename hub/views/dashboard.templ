@@ -7,7 +7,7 @@ script buildChart(id, endpoint string) {
             .then(data => {
                 const ctx = document.getElementById(id).getContext('2d');
                 const myChart = new Chart(ctx, {
-                    type: 'bar',
+                    type: 'line',
                     data: {
                         labels: data.labels,
                         datasets: data.datasets
@@ -37,10 +37,18 @@ script buildChart(id, endpoint string) {
 templ Dashboard() {
 	@AppLayout("Dashboard", "dashboard") {
 		<div class="py-4">
-			<div class="max-h-96">
-				<canvas id="jobChart" class="w-full bg-stone-900"></canvas>
+			<div class="max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6">
+				<h3 class="p-2 text-white">Jobs</h3>
+				<canvas id="jobChart" class="w-full bg-stone-800"></canvas>
 			</div>
 			@buildChart("jobChart", URL(ctx, "/api/counts"))
+		</div>
+		<div class="py-4">
+			<div class="max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6">
+				<h3 class="p-2 text-white">Workers</h3>
+				<canvas id="jobChart2" class="w-full bg-stone-800"></canvas>
+			</div>
+			@buildChart("jobChart2", URL(ctx, "/api/workers"))
 		</div>
 	}
 }

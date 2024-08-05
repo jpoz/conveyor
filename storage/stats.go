@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jpoz/conveyor/wire"
@@ -26,6 +27,7 @@ type Stats interface {
 
 	// Workers
 	ActiveWorkerCount(ctx context.Context) (int64, error)
+	HistoricalWorkerCount(context.Context, time.Time) (int64, error)
 	PruneActiveWorkers(ctx context.Context) error
 }
 
@@ -131,6 +133,20 @@ func (s *RedisHandler) HistoricalJobCount(ctx context.Context, t time.Time, resu
 	return val, nil
 }
 
+func (s *RedisHandler) HistoricalWorkerCount(ctx context.Context, t time.Time) (int64, error) {
+	key := s.HistoricalWorkersKey(t)
+
+	val, err := s.rdb.Get(ctx, key).Int64()
+	if err == redis.Nil {
+		// Key does not exist
+		return 0, nil
+	} else if err != nil {
+		return 0, fmt.Errorf("could not get count for key %s: %w", key, err)
+	}
+
+	return val, nil
+}
+
 // PruneActiveQueues will remove queues that haven't pinned a job in the last 30 seconds
 func (s *RedisHandler) PruneActiveQueues(ctx context.Context) error {
 	s.log.Debug("Pruning active queues")
@@ -147,6 +163,12 @@ func (s *RedisHandler) PruneActiveWorkers(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not prune active queues: %w", err)
 	}
+
+	err = s.countWorkers(ctx)
+	if err != nil {
+		return fmt.Errorf("could not count workers: %w", err)
+	}
+
 	return nil
 }
 
@@ -172,6 +194,7 @@ func (s *RedisHandler) queueCheckIn(ctx context.Context, queue string) error {
 }
 
 func (s *RedisHandler) workerCheckIn(ctx context.Context, workerID string) error {
+	s.log.Info("worker check in", slog.String("worker_id", workerID))
 	err := s.rdb.ZAdd(ctx, s.ActiveWorkersKey(), redis.Z{
 		Score:  float64(time.Now().Unix()),
 		Member: workerID,
@@ -189,7 +212,7 @@ func (s *RedisHandler) removeActiveJob(ctx context.Context, job *wire.Job, resul
 		return err
 	}
 
-	err = s.incrResult(ctx, result)
+	err = s.incrResult(ctx, job, result)
 	if err != nil {
 		return fmt.Errorf("could not increment result: %w", err)
 	}
@@ -197,17 +220,41 @@ func (s *RedisHandler) removeActiveJob(ctx context.Context, job *wire.Job, resul
 	return nil
 }
 
-func (s *RedisHandler) incrResult(ctx context.Context, result Result) error {
-	key := s.HistoricalResultKey(time.Now(), result)
+func (s *RedisHandler) countWorkers(ctx context.Context) error {
+	key := s.HistoricalWorkersKey(time.Now())
 
-	err := s.rdb.Incr(ctx, key).Err()
+	count, err := s.ActiveWorkerCount(ctx)
 	if err != nil {
-		return fmt.Errorf("could not increment count: %w", err)
+		return fmt.Errorf("could not get worker count: %w", err)
 	}
 
-	err = s.rdb.Expire(ctx, key, 1*time.Hour).Err()
+	s.log.Info("setting historical worker count", slog.Int64("count", count))
+
+	err = s.rdb.Set(ctx, key, count, 1*time.Hour).Err()
 	if err != nil {
-		return fmt.Errorf("could not set expiry: %w", err)
+		return fmt.Errorf("could not set historical worker count %s: %w", key, err)
+	}
+
+	return nil
+}
+
+func (s *RedisHandler) incrResult(ctx context.Context, job *wire.Job, result Result) error {
+
+	keys := []string{
+		s.HistoricalResultKey(time.Now(), result),
+		s.HistoricalJobResultKey(time.Now(), job.Type, result),
+	}
+
+	for _, key := range keys {
+		err := s.rdb.Incr(ctx, key).Err()
+		if err != nil {
+			return fmt.Errorf("could not increment count: %s %w", key, err)
+		}
+
+		err = s.rdb.Expire(ctx, key, 1*time.Hour).Err()
+		if err != nil {
+			return fmt.Errorf("could not set expiry: %s %w", key, err)
+		}
 	}
 
 	return nil

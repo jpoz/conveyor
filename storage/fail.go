@@ -63,7 +63,7 @@ func (s *RedisHandler) FailJob(ctx context.Context, uuid string) error {
 		}
 	}
 
-	err = s.incrResult(ctx, result)
+	err = s.incrResult(ctx, job, result)
 	if err != nil {
 		s.log.Error("could not fail job: %s", slog.Any("err", err))
 	}
