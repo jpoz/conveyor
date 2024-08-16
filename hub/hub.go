@@ -167,14 +167,14 @@ func (s *Server) Handler(opts HandlerOpts) http.Handler {
 	mux.HandleFunc("DELETE /jobs", s.DeleteJobsHandler)
 	mux.HandleFunc("DELETE /scheduled/jobs", s.DeleteScheduledJobsHandler)
 
-	mux.HandleFunc("GET /static/*", s.StaticHandler("/static"))
-	mux.HandleFunc("GET /js/*", SrcHandler(filepath.Join(prefix, "js")))
+	mux.HandleFunc("GET /static/", s.StaticHandler("/static"))
+	mux.HandleFunc("GET /js/", SrcHandler(filepath.Join(prefix, "/js")))
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Conveyor path not found: %s", path)
-	})
+	// mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	path := r.URL.Path
+	// 	w.WriteHeader(http.StatusNotFound)
+	// 	fmt.Fprintf(w, "Conveyor path not found: %s", path)
+	// })
 
 	prefexHandler := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

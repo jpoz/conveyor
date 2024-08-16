@@ -2,7 +2,6 @@ package hub
 
 import (
 	"embed"
-	"fmt"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -18,7 +17,7 @@ func (s *Server) StaticHandler(root string) http.HandlerFunc {
 		trimmedPath := strings.TrimPrefix(r.URL.Path, root)
 		// Ensure the path is sanitized to avoid directory traversal issues.
 		path := filepath.Join("static", filepath.Clean("/"+trimmedPath))
-		fmt.Println(path)
+		s.log.Info("!!!!!!!!!!!!!Serving static file", "path", path)
 
 		// Avoid serving directory paths.
 		if strings.HasSuffix(r.URL.Path, "/") {

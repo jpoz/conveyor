@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -171,7 +172,7 @@ func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
 func (w *Worker) callJob(ctx context.Context, job *wire.Job) error {
 	defer func() {
 		if r := recover(); r != nil {
-			w.log.Error("panic", slog.Any("panic", r))
+			w.log.Error("conveyor worker panic (recovered)", slog.Any("panic", r), slog.String("stack", string(debug.Stack())))
 		}
 	}()
 

@@ -40,9 +40,9 @@ func SrcHandler(root string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		urlPath := r.URL.Path
 		requestPath := strings.TrimPrefix(urlPath, root)
-		filePath := filepath.Join("src/dist", requestPath)
+		filePath := filepath.Join("dist", requestPath)
 
-		slog.Info("Serving embedded file", "path", r.URL.Path, "filename", filePath)
+		slog.Info("Serving embedded file", "path", r.URL.Path, "filename", filePath, "requestPath", requestPath, "root", root)
 
 		file, err := dist.Open(filePath)
 		if err != nil {

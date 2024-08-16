@@ -10,46 +10,6 @@ import "context"
 import "io"
 import "bytes"
 
-func buildChart(id, endpoint string) templ.ComponentScript {
-	return templ.ComponentScript{
-		Name: `__templ_buildChart_e07e`,
-		Function: `function __templ_buildChart_e07e(id, endpoint){document.addEventListener('DOMContentLoaded', function() {
-        fetch(endpoint)
-            .then(response => response.json())
-            .then(data => {
-                const ctx = document.getElementById(id).getContext('2d');
-                const myChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: data.labels,
-                        datasets: data.datasets
-                    },
-                    options: {
-                        plugins: {
-                          customCanvasBackgroundColor: {
-                            color: '#1c1917',
-                          }
-                        },
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                stacked: true,
-                            },
-                            y: {
-                                stacked: true
-                            }
-                        }
-                    }
-                });
-            })
-            .catch(error => console.error('Error loading chart data:', error));
-    });
-}`,
-		Call:       templ.SafeScript(`__templ_buildChart_e07e`, id, endpoint),
-		CallInline: templ.SafeScriptInline(`__templ_buildChart_e07e`, id, endpoint),
-	}
-}
-
 func Dashboard() templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
@@ -69,23 +29,33 @@ func Dashboard() templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"py-4\"><div class=\"max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6\"><h3 class=\"p-2 text-white\">Jobs</h3><canvas id=\"jobChart\" class=\"w-full bg-stone-800\"></canvas></div>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"py-4\"><div class=\"max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6\"><h3 class=\"p-2 text-white\">Jobs</h3><stacked-bar-chart data-url=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = buildChart("jobChart", URL(ctx, "/api/counts")).Render(ctx, templ_7745c5c3_Buffer)
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs("/api/counts")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `dashboard.templ`, Line: 8, Col: 47}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div><div class=\"py-4\"><div class=\"max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6\"><h3 class=\"p-2 text-white\">Workers</h3><canvas id=\"jobChart2\" class=\"w-full bg-stone-800\"></canvas></div>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\"></stacked-bar-chart></div></div><div class=\"py-4\"><div class=\"max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6\"><h3 class=\"p-2 text-white\">Workers</h3><stacked-bar-chart data-url=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = buildChart("jobChart2", URL(ctx, "/api/workers")).Render(ctx, templ_7745c5c3_Buffer)
+			var templ_7745c5c3_Var4 string
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs("/api/workers")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `dashboard.templ`, Line: 14, Col: 48}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\"></stacked-bar-chart></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -113,9 +83,9 @@ func Jobs() templ.Component {
 			defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var3 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var3 == nil {
-			templ_7745c5c3_Var3 = templ.NopComponent
+		templ_7745c5c3_Var5 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var5 == nil {
+			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"flex\"></div>")
