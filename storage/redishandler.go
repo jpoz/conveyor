@@ -46,10 +46,6 @@ func (s *RedisHandler) setJob(ctx context.Context, uuid string, jobBytes []byte)
 	return nil
 }
 
-func (s *RedisHandler) Ping(ctx context.Context) error {
-	return s.rdb.Ping(ctx).Err()
-}
-
 func (s *RedisHandler) Close() error {
 	return s.rdb.Close()
 }

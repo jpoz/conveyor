@@ -68,9 +68,7 @@ gen_protos:
 ## Test
 .PHONY: test
 test: ## Run tests
-.PHONY: cover
-cover: test ## Generate coverage report
-	$(GOCMD) tool cover -html=coverage.out
+	$(GOTEST)
 
 .PHONY: integration
 integration: ## Run tests + integration

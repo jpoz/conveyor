@@ -1,46 +1,18 @@
 package views
 
-script buildChart(id, endpoint string) {
-    document.addEventListener('DOMContentLoaded', function() {
-        fetch(endpoint)
-            .then(response => response.json())
-            .then(data => {
-                const ctx = document.getElementById(id).getContext('2d');
-                const myChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.labels,
-                        datasets: data.datasets
-                    },
-                    options: {
-                        plugins: {
-                          customCanvasBackgroundColor: {
-                            color: '#1c1917',
-                          }
-                        },
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                stacked: true,
-                            },
-                            y: {
-                                stacked: true
-                            }
-                        }
-                    }
-                });
-            })
-            .catch(error => console.error('Error loading chart data:', error));
-    });
-}
-
 templ Dashboard() {
 	@AppLayout("Dashboard", "dashboard") {
 		<div class="py-4">
-			<div class="max-h-96">
-				<canvas id="jobChart" class="w-full bg-stone-900"></canvas>
+			<div class="max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6">
+				<h3 class="p-2 text-white">Jobs</h3>
+				<stacked-bar-chart data-url={ "/api/counts" }></stacked-bar-chart>
 			</div>
-			@buildChart("jobChart", URL(ctx, "/api/counts"))
+		</div>
+		<div class="py-4">
+			<div class="max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6">
+				<h3 class="p-2 text-white">Workers</h3>
+				<stacked-bar-chart data-url={ "/api/workers" }></stacked-bar-chart>
+			</div>
 		</div>
 	}
 }

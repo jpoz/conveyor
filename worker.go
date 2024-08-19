@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -140,7 +141,7 @@ func (w *Worker) ContextFor(ctx context.Context, job *wire.Job) context.Context 
 
 func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
 	handler := func(ictx context.Context) error {
-		w.log.Info("calling job!!", slog.String("uuid", job.Uuid), slog.Any("job", job))
+		w.log.Info("calling job", slog.String("uuid", job.Uuid), slog.Any("type", job.Type), slog.Any("queue", job.Queue))
 		return w.callJob(ictx, job)
 	}
 
@@ -171,7 +172,7 @@ func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
 func (w *Worker) callJob(ctx context.Context, job *wire.Job) error {
 	defer func() {
 		if r := recover(); r != nil {
-			w.log.Error("panic", slog.Any("panic", r))
+			w.log.Error("conveyor worker panic (recovered)", slog.Any("panic", r), slog.String("stack", string(debug.Stack())))
 		}
 	}()
 
@@ -232,7 +233,7 @@ func (w *Worker) callJob(ctx context.Context, job *wire.Job) error {
 
 func (w *Worker) Heartbeat(ctx context.Context) error {
 	for {
-		err := w.handler.Ping(ctx)
+		err := w.handler.Heartbeat(ctx, w.ID)
 		if err != nil {
 			slog.Error("failed to ping redis", err)
 		}
@@ -248,14 +249,16 @@ func (w *Worker) Heartbeat(ctx context.Context) error {
 }
 
 func (w *Worker) Run(ctx context.Context) error {
+	w.log.Info("Starting worker", slog.String("id", w.ID))
+
 	if len(w.registeredFullNames) == 0 {
 		return ErrNoRegisteredJobs
 	}
 
 	go w.Heartbeat(ctx)
-	go w.Periodic(ctx, 24*time.Hour, w.handler.PruneActiveQueues)
-	go w.Periodic(ctx, 30*time.Second, w.handler.PruneActiveWorkers)
-	go w.Periodic(ctx, 1*time.Second, w.handler.PopScheduledJobs)
+	go w.Periodic(ctx, "Prune active queues", 24*time.Hour, w.handler.PruneActiveQueues)
+	go w.Periodic(ctx, "Prune active workers", 30*time.Second, w.handler.PruneActiveWorkers)
+	go w.Periodic(ctx, "Pop scheduled jobs", 1*time.Second, w.handler.PopScheduledJobs)
 
 	w.log.Info("Starting worker", slog.String("id", w.ID))
 
@@ -301,7 +304,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 }
 
-func (w *Worker) Periodic(ctx context.Context, duration time.Duration, fn func(ctx context.Context) error) error {
+func (w *Worker) Periodic(ctx context.Context, name string, duration time.Duration, fn func(ctx context.Context) error) error {
 	// Create a new ticker
 	ticker := time.NewTicker(duration)
 	defer ticker.Stop()
@@ -313,7 +316,7 @@ func (w *Worker) Periodic(ctx context.Context, duration time.Duration, fn func(c
 		case <-ticker.C:
 			err := fn(ctx)
 			if err != nil {
-				return err // handle the error how you'd like
+				w.log.Error("failed to call periodic function", slog.String("name", name), slog.String("error", err.Error()))
 			}
 
 		// Context cancellation or deadline exceeded

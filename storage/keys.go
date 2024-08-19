@@ -49,6 +49,14 @@ func (r RedisHandler) HistoricalResultKey(t time.Time, result Result) string {
 	return fmt.Sprintf("%s:hist:%s:%s", r.Namespace, result.String(), t.Format("2006-01-02_15:04"))
 }
 
+func (r RedisHandler) HistoricalJobResultKey(t time.Time, ty string, result Result) string {
+	return fmt.Sprintf("%s:j_hist:%s:%s:%s", r.Namespace, ty, result.String(), t.Format("2006-01-02_15:04"))
+}
+
+func (r RedisHandler) HistoricalWorkersKey(t time.Time) string {
+	return fmt.Sprintf("%s:w_hist:%s", r.Namespace, t.Format("2006-01-02_15:04"))
+}
+
 func (r RedisHandler) OnCompleteListKey(predecessorUuid string) string {
 	return fmt.Sprintf("%s:job:%s:onComplete", r.Namespace, predecessorUuid)
 }

@@ -142,19 +142,19 @@ func (s *Server) Handler(opts HandlerOpts) http.Handler {
 	mux := http.NewServeMux()
 
 	prefix := opts.Prefix
-	if prefix == "" {
-		prefix = "/"
-	}
 	homeURL := opts.HomeURL
 	if homeURL == "" {
 		homeURL = "/"
 	}
 
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		s.log.Info("redirecting to dashboard", slog.String("to", homeURL))
 		basePath := filepath.Join(prefix, "dashboard")
 		http.Redirect(w, r, basePath, http.StatusFound)
 	})
 	mux.HandleFunc("GET /api/counts", s.JobsApi)
+	mux.HandleFunc("GET /api/workers", s.WorkersApi)
+
 	mux.HandleFunc("GET /dashboard", s.DashboardHandler)
 	mux.HandleFunc("GET /events", s.EventHandler)
 	mux.HandleFunc("GET /jobs", s.JobsHandler)
@@ -163,17 +163,18 @@ func (s *Server) Handler(opts HandlerOpts) http.Handler {
 	mux.HandleFunc("GET /queues/scheduled/jobs/{jobUuid}", s.ScheduledJobPageHandler)
 	mux.HandleFunc("GET /queues/{queueName}", s.QueuePageHandler)
 	mux.HandleFunc("GET /queues/{queueName}/jobs/{jobUuid}", s.JobPageHandler)
+
 	mux.HandleFunc("DELETE /jobs", s.DeleteJobsHandler)
 	mux.HandleFunc("DELETE /scheduled/jobs", s.DeleteScheduledJobsHandler)
 
-	mux.HandleFunc("GET /static/*", s.StaticHandler("/static"))
-	mux.HandleFunc("GET /js/*", SrcHandler(filepath.Join(prefix, "js")))
+	mux.HandleFunc("GET /static/", s.StaticHandler("/static"))
+	mux.HandleFunc("GET /js/", SrcHandler(filepath.Join(prefix, "/js")))
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Conveyor path not found: %s", path)
-	})
+	// mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	path := r.URL.Path
+	// 	w.WriteHeader(http.StatusNotFound)
+	// 	fmt.Fprintf(w, "Conveyor path not found: %s", path)
+	// })
 
 	prefexHandler := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
