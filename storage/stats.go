@@ -15,7 +15,7 @@ type Stats interface {
 	// Queues
 	ActiveQueues(ctx context.Context) ([]string, error)
 	ActiveQueueCount(ctx context.Context) (int64, error)
-	PruneActiveQueues(ctx context.Context) error
+	PruneActiveQueues(context.Context, time.Duration) error
 	CountQueueJobs(ctx context.Context, queue string) (int64, error)
 	CountScheduledJobs(ctx context.Context) (int64, error)
 	ListQueueJobs(ctx context.Context, queue string, start, stop int64) ([]*wire.Job, error)
@@ -28,7 +28,7 @@ type Stats interface {
 	// Workers
 	ActiveWorkerCount(ctx context.Context) (int64, error)
 	HistoricalWorkerCount(context.Context, time.Time) (int64, error)
-	PruneActiveWorkers(ctx context.Context) error
+	PruneActiveWorkers(context.Context, time.Duration) error
 }
 
 type Result int
@@ -148,27 +148,12 @@ func (s *RedisHandler) HistoricalWorkerCount(ctx context.Context, t time.Time) (
 }
 
 // PruneActiveQueues will remove queues that haven't pinned a job in the last 30 seconds
-func (s *RedisHandler) PruneActiveQueues(ctx context.Context) error {
+func (s *RedisHandler) PruneActiveQueues(ctx context.Context, _ time.Duration) error {
 	s.log.Debug("Pruning active queues")
 	err := s.rdb.ZRemRangeByScore(ctx, s.ActiveQueuesKey(), "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
 	if err != nil {
 		return fmt.Errorf("could not prune active queues: %w", err)
 	}
-	return nil
-}
-
-func (s *RedisHandler) PruneActiveWorkers(ctx context.Context) error {
-	s.log.Debug("Pruning active workers")
-	err := s.rdb.ZRemRangeByScore(ctx, s.ActiveWorkersKey(), "-inf", fmt.Sprintf("%d", time.Now().Unix()-30)).Err()
-	if err != nil {
-		return fmt.Errorf("could not prune active queues: %w", err)
-	}
-
-	err = s.countWorkers(ctx)
-	if err != nil {
-		return fmt.Errorf("could not count workers: %w", err)
-	}
-
 	return nil
 }
 

@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *RedisHandler) PopScheduledJobs(ctx context.Context) error {
+func (s *RedisHandler) PopScheduledJobs(ctx context.Context, _ time.Duration) error {
 	t := time.Now().Unix()
 	ts := fmt.Sprintf("%d", t)
 	jobs, err := s.rdb.ZRangeByScore(

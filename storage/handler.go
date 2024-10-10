@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"time"
 
 	"github.com/jpoz/conveyor/wire"
 )
@@ -14,7 +15,7 @@ type Handler interface {
 	GetActiveJob(ctx context.Context, uuid string) (*wire.Job, error)
 	AddJob(ctx context.Context, job *wire.Job) error
 	Pop(ctx context.Context, workerUuid string, queues ...string) (*wire.Job, error)
-	PopScheduledJobs(ctx context.Context) error
+	PopScheduledJobs(context.Context, time.Duration) error
 
 	RemoveJob(ctx context.Context, job *wire.Job) error
 	RemoveScheduledJob(ctx context.Context, job *wire.Job) error
@@ -27,6 +28,7 @@ type Handler interface {
 	FailJob(ctx context.Context, uuid string) error
 
 	Ping(ctx context.Context) error
+	PruneActiveWorkers(context.Context, time.Duration) error
 	Close() error
 
 	Stats

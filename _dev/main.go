@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
-	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
@@ -43,6 +42,7 @@ func main() {
 			Level:      slog.LevelInfo,
 			TimeFormat: time.Kitchen,
 		})),
+		Concurrency: 5,
 	})
 
 	if err != nil {
@@ -50,11 +50,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = w.RegisterJobs(StartJob, ChildJob, LastJob)
-	if err != nil {
-		log.Error("failed to register jobs", slog.String("error", err.Error()))
-		os.Exit(1)
-	}
 	err = w.RegisterJobs(StartJob, ChildJob, LastJob)
 	if err != nil {
 		log.Error("failed to register jobs", slog.String("error", err.Error()))
@@ -95,25 +90,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, err = client.Enqueue(ctx, &Start{
-		Spawn:   3,
-		Levels:  3,
-		Message: "Hello, World!",
+	fmt.Println("client created", client)
+
+	_, err = client.Enqueue(ctx, &Child{
+		Count: 10,
 	})
 	if err != nil {
 		log.Error("failed to enqueue job", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
-	_, err = client.Enqueue(ctx, &Start{
-		Spawn:   3,
-		Levels:  3,
-		Message: "Hello, World!",
-	}, conveyor.Delay(5*60*time.Second))
-	if err != nil {
-		log.Error("failed to enqueue job", slog.String("error", err.Error()))
-		os.Exit(1)
-	}
+	// _, err = client.Enqueue(ctx, &Start{
+	// 	Spawn:   3,
+	// 	Levels:  3,
+	// 	Message: "Hello, World!",
+	// }, conveyor.Delay(5*60*time.Second))
+	// if err != nil {
+	// 	log.Error("failed to enqueue job", slog.String("error", err.Error()))
+	// 	os.Exit(1)
+	// }
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -153,11 +148,19 @@ func StartJob(ctx context.Context, arg *Start) error {
 }
 
 func ChildJob(ctx context.Context, arg *Child) error {
-	time.Sleep(sleep)
+	j := conveyor.CurrentJob(ctx)
 
-	if rand.Intn(5) > 2 {
-		return fmt.Errorf("child job failed")
+	for i := int32(0); i < arg.Count; i++ {
+		slog.Info("Boooop job",
+			slog.Int("count", int(i+1)),
+			slog.String("uuid", j.Uuid),
+		)
+		time.Sleep(time.Millisecond * 500)
 	}
+
+	// if rand.Intn(5) > 2 {
+	// 	return fmt.Errorf("child job failed")
+	// }
 
 	return nil
 }
