@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	sync "sync"
 	"syscall"
 	"time"
 
@@ -56,10 +57,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	var wg sync.WaitGroup
+
 	ctx, cancel := context.WithCancel(context.Background())
 	if *workerFlag {
+		wg.Add(1)
 		log.Info("Starting worker...")
-		go w.Run(ctx)
+		go func() {
+			defer wg.Done()
+			w.Run(ctx)
+		}()
 	}
 
 	if *serverFlag {
@@ -116,6 +123,8 @@ func main() {
 	<-sigCh
 	log.Warn("Shutting down...")
 	cancel()
+
+	wg.Wait()
 }
 
 func StartJob(ctx context.Context, arg *Start) error {

@@ -249,12 +249,14 @@ func (w *Worker) Heartbeat(ctx context.Context, duration time.Duration) error {
 	}
 }
 
-func (w *Worker) Run(ctx context.Context) error {
+func (w *Worker) Run(pctx context.Context) error {
 	w.log.Info("Starting worker", slog.String("id", w.ID))
 
 	if len(w.registeredFullNames) == 0 {
 		return ErrNoRegisteredJobs
 	}
+
+	ctx := context.WithoutCancel(pctx)
 
 	go w.Heartbeat(ctx, 15*time.Second)
 	go w.Periodic(ctx, "Prune active workers", 30*time.Second, w.handler.PruneActiveWorkers)
@@ -273,7 +275,6 @@ func (w *Worker) Run(ctx context.Context) error {
 		go func() {
 			defer wg.Done()
 			for job := range jobsChan {
-				slog.Info("Calling job", slog.String("uuid", job.Uuid), slog.Int("i", i))
 				if err := w.CallJob(ctx, job); err != nil {
 					slog.Error("failed to call job", "error", err)
 				}
@@ -290,7 +291,7 @@ func (w *Worker) Run(ctx context.Context) error {
 
 		if job == nil {
 			select {
-			case <-ctx.Done():
+			case <-pctx.Done():
 				slog.Info("Stopping worker(s)")
 				close(jobsChan) // Close the channel to stop workers
 				wg.Wait()       // Wait for all workers to finish processing
@@ -301,7 +302,6 @@ func (w *Worker) Run(ctx context.Context) error {
 			continue
 		}
 
-		slog.Info("Popped job", slog.String("uuid", job.Uuid))
 		jobsChan <- job
 	}
 }
