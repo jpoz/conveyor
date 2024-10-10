@@ -145,6 +145,7 @@ func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
 		return w.callJob(ictx, job)
 	}
 
+	// TODO: build up middlwares when a function is added to the worker rather than each call
 	for i := len(w.middlewares) - 1; i >= 0; i-- {
 		mw := w.middlewares[i]
 		next := handler
@@ -162,7 +163,7 @@ func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
 		return fmt.Errorf("job %s failed: %w", job.Uuid, err)
 	}
 
-	_, err = w.handler.CloseJob(ctx, job)
+	_, err = w.handler.CloseJob(ctx, w.ID, job)
 	if err != nil {
 		return fmt.Errorf("failed to close job %s: %w", job.Uuid, err)
 	}
@@ -281,7 +282,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 
 	for {
-		job, err := w.handler.Pop(ctx, w.registeredFullNames...)
+		job, err := w.handler.Pop(ctx, w.ID, w.registeredFullNames...)
 		if err != nil {
 			slog.Error("failed to pop job", "error", err)
 			return err

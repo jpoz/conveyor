@@ -10,13 +10,20 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *RedisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error) {
+func (s *RedisHandler) CloseJob(ctx context.Context, workerUuid string, job *wire.Job) (bool, error) {
 	log := s.log.With(
 		slog.String("uuid", job.Uuid),
 		slog.String("queue", job.Queue),
 		slog.String("type", job.Type),
 		slog.String("parent", job.ParentUuid),
 	)
+
+	// Remove from active jobs
+	err := s.rdb.SRem(ctx, s.WorkerActiveJobsKey(workerUuid), job.Uuid).Err()
+	if err != nil {
+		log.Error("could not remove active job", slog.Any("error", err), slog.String("uuid", job.Uuid), slog.String("worker", workerUuid))
+		return false, fmt.Errorf("[worker: %s] could not remove active job %s: %w", workerUuid, job.Uuid, err)
+	}
 
 	hadChildren := false
 
@@ -112,7 +119,7 @@ func (s *RedisHandler) CloseJob(ctx context.Context, job *wire.Job) (bool, error
 		}
 
 		log.Debug("Closing parent")
-		parentClosed, err = s.CloseJob(ctx, parentJob)
+		parentClosed, err = s.CloseJob(ctx, workerUuid, parentJob)
 		if err != nil {
 			return false, err
 		}
