@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *RedisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, error) {
+func (s *RedisHandler) Pop(ctx context.Context, workerUuid string, queues ...string) (*wire.Job, error) {
 	s.log.Debug("Popping jobs from queues", slog.Any("queues", queues))
 
 	go func() {
@@ -61,9 +61,14 @@ func (s *RedisHandler) Pop(ctx context.Context, queues ...string) (*wire.Job, er
 		return nil, err
 	}
 
-	err = s.setJob(ctx, job.Uuid, []byte(payload[1]))
+	err = s.rdb.Set(ctx, s.JobKey(job.Uuid), []byte(payload[1]), 0).Err()
 	if err != nil {
-		return nil, fmt.Errorf("failed to store job in redis: %v", err)
+		return nil, err
+	}
+
+	err = s.rdb.SAdd(ctx, s.WorkerActiveJobsKey(workerUuid), job.Uuid).Err()
+	if err != nil {
+		return nil, err
 	}
 
 	err = s.addActiveJob(ctx, job)

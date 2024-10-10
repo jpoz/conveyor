@@ -1,7 +1,6 @@
 package storage
 
 import (
-	context "context"
 	"fmt"
 	"log/slog"
 
@@ -35,15 +34,6 @@ func NewRedisHandler(cfg config.RedisConfig) (Handler, error) {
 		log:       log.With(slog.String("handler", "redis")),
 		Namespace: cfg.GetNamespace(),
 	}, nil
-}
-
-func (s *RedisHandler) setJob(ctx context.Context, uuid string, jobBytes []byte) error {
-	err := s.rdb.Set(ctx, s.JobKey(uuid), jobBytes, 0).Err()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *RedisHandler) Close() error {

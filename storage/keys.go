@@ -17,6 +17,10 @@ func (r RedisHandler) ActiveWorkersKey() string {
 	return fmt.Sprintf("%s:workers:active", r.Namespace)
 }
 
+func (r RedisHandler) WorkerActiveJobsKey(workerUuid string) string {
+	return fmt.Sprintf("%s:worker:active:%s", r.Namespace, workerUuid)
+}
+
 func (r RedisHandler) FailedJobsKey() string {
 	return fmt.Sprintf("%s:failed", r.Namespace)
 }

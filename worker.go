@@ -145,6 +145,7 @@ func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
 		return w.callJob(ictx, job)
 	}
 
+	// TODO: build up middlwares when a function is added to the worker rather than each call
 	for i := len(w.middlewares) - 1; i >= 0; i-- {
 		mw := w.middlewares[i]
 		next := handler
@@ -162,7 +163,7 @@ func (w *Worker) CallJob(ctx context.Context, job *wire.Job) error {
 		return fmt.Errorf("job %s failed: %w", job.Uuid, err)
 	}
 
-	_, err = w.handler.CloseJob(ctx, job)
+	_, err = w.handler.CloseJob(ctx, w.ID, job)
 	if err != nil {
 		return fmt.Errorf("failed to close job %s: %w", job.Uuid, err)
 	}
@@ -231,14 +232,14 @@ func (w *Worker) callJob(ctx context.Context, job *wire.Job) error {
 	return nil
 }
 
-func (w *Worker) Heartbeat(ctx context.Context) error {
+func (w *Worker) Heartbeat(ctx context.Context, duration time.Duration) error {
 	for {
 		err := w.handler.Heartbeat(ctx, w.ID)
 		if err != nil {
 			slog.Error("failed to ping redis", err)
 		}
 
-		tick := time.NewTicker(15 * time.Second)
+		tick := time.NewTicker(duration)
 		select {
 		case <-tick.C:
 		case <-ctx.Done():
@@ -248,22 +249,23 @@ func (w *Worker) Heartbeat(ctx context.Context) error {
 	}
 }
 
-func (w *Worker) Run(ctx context.Context) error {
+func (w *Worker) Run(pctx context.Context) error {
 	w.log.Info("Starting worker", slog.String("id", w.ID))
 
 	if len(w.registeredFullNames) == 0 {
 		return ErrNoRegisteredJobs
 	}
 
-	go w.Heartbeat(ctx)
-	go w.Periodic(ctx, "Prune active queues", 24*time.Hour, w.handler.PruneActiveQueues)
-	go w.Periodic(ctx, "Prune active workers", 30*time.Second, w.handler.PruneActiveWorkers)
-	go w.Periodic(ctx, "Pop scheduled jobs", 1*time.Second, w.handler.PopScheduledJobs)
+	ctx := context.WithoutCancel(pctx)
 
-	w.log.Info("Starting worker", slog.String("id", w.ID))
+	go w.Heartbeat(ctx, 15*time.Second)
+	go w.Periodic(ctx, "Prune active workers", 30*time.Second, w.handler.PruneActiveWorkers)
+	go w.Periodic(ctx, "Prune active queues", 24*time.Hour, w.handler.PruneActiveQueues)
+	go w.Periodic(ctx, "Pop scheduled jobs", 1*time.Second, w.handler.PopScheduledJobs)
 
 	// Create a channel for jobs and a wait group for synchronization
 	jobsChan := make(chan *wire.Job)
+
 	var wg sync.WaitGroup
 
 	// Start a fixed number of goroutines to process jobs
@@ -281,7 +283,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 
 	for {
-		job, err := w.handler.Pop(ctx, w.registeredFullNames...)
+		job, err := w.handler.Pop(ctx, w.ID, w.registeredFullNames...)
 		if err != nil {
 			slog.Error("failed to pop job", "error", err)
 			return err
@@ -289,7 +291,7 @@ func (w *Worker) Run(ctx context.Context) error {
 
 		if job == nil {
 			select {
-			case <-ctx.Done():
+			case <-pctx.Done():
 				slog.Info("Stopping worker(s)")
 				close(jobsChan) // Close the channel to stop workers
 				wg.Wait()       // Wait for all workers to finish processing
@@ -304,7 +306,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 }
 
-func (w *Worker) Periodic(ctx context.Context, name string, duration time.Duration, fn func(ctx context.Context) error) error {
+func (w *Worker) Periodic(ctx context.Context, name string, duration time.Duration, fn func(ctx context.Context, duration time.Duration) error) error {
 	// Create a new ticker
 	ticker := time.NewTicker(duration)
 	defer ticker.Stop()
@@ -314,7 +316,7 @@ func (w *Worker) Periodic(ctx context.Context, name string, duration time.Durati
 		select {
 		// Ticker case
 		case <-ticker.C:
-			err := fn(ctx)
+			err := fn(ctx, duration)
 			if err != nil {
 				w.log.Error("failed to call periodic function", slog.String("name", name), slog.String("error", err.Error()))
 			}
