@@ -5,13 +5,13 @@ templ Dashboard() {
 		<div class="py-4">
 			<div class="max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6">
 				<h3 class="p-2 text-white">Jobs</h3>
-				<stacked-bar-chart data-url={ "/api/counts" }></stacked-bar-chart>
+				<stacked-bar-chart data-url={ URL(ctx, "/api/counts") }></stacked-bar-chart>
 			</div>
 		</div>
 		<div class="py-4">
 			<div class="max-h-96 border border-stone-100 rounded-xl bg-stone-800 pb-12 px-6">
 				<h3 class="p-2 text-white">Workers</h3>
-				<stacked-bar-chart data-url={ "/api/workers" }></stacked-bar-chart>
+				<stacked-bar-chart data-url={ URL(ctx, "/api/workers") }></stacked-bar-chart>
 			</div>
 		</div>
 	}
